@@ -21,6 +21,7 @@ output: html_document
 #In order to avoid having to do this for every single chunk in this RMD file,
 #I do the following:
 
+#REMOVE COMMENT AT END OF FOLLOWING LINE BEFORE SUBMITTING PROJECT:
 knitr::opts_chunk$set(echo=FALSE)#, message=FALSE, warning=FALSE)
 
 
@@ -29,60 +30,199 @@ library(ggplot2)
 
 ```{r Load_the_Data}
 # Load the Data
-
-
+full_data <- read.csv("Data/prosperLoanData.csv")
 ```
+
+```{r Check the data}
+str(full_data)
+head(full_data)
+```
+
 
 # Introduction
 
-In this project, I'm interested in energy usage. In particular, I'm interested
-in a few different variables for each state in the United States:
+In this project, I'm interested in exploring data from [Prosper](https://www.prosper.com/plp/about/), 
+a peer-to-peer lending platform. As this is a huge data set (~114,000 
+observations with 81 variables), I'll be limiting myself to a subset of the most interesting variables. It should be noted that the data from this were last updated 3/11/2014. 
 
-1. Electricity generation fuel/technology type mixture
-2. Federal election results
-3. Time
+In particular, I'm most interested in the following variables (for the reasons included):
 
-Using the election results as a proxy for a state's progressive or
-conservative leanings, I hope to determine if any correlation exists between
-these political choices and energy mix choices, in particular the carbon dioxide
-emissions of these energy choices. 
+Prosper Variable | Why It's Interesting
+--- | ---
+ListingCreationDate | This is useful for contextualizing the data, especially given the Great Recession of 2008-09
+Term | Useful for understanding what time span a borrower felt comfortable with
+LoanStatus | This is a primary outcome variable, helping to determine things like Prosper's average default rate and what types of borrowers tend to default
+ClosedDate | Useful for knowing what average payoff (and permanent default) timelines look like
+BorrowerAPR | This will provide broad context for the cost of the loan, beyond what is provided in BorrowerRate
+BorrowerRate | This gives an idea of how much the borrower emphasized monthly payments vs. total loan cost by comparing to LenderYield | This helps me understand what was in it for the lender. I expect that this will be directly 
+ListingCategory | This will again be helfpul for contextualizing the data and letting me know what the loan's stated purpose was/is. 
+BorrowerState | This may provide interesting extra data in the geographic sense (e.g. comparing loan defaults in a given state with the amount of home foreclosures in that state for the year in question)
+EmploymentStatus | A useful categorical variable for determining likelihood and speed of repayment based on existing employment
+CreditScoreRangeLower | Provides economic context for the borrowers
+CreditScoreRangeUpper | Provides economic context for the borrowers
+CreditScoreMidpt | A variable calculated in this project, using the midpoint of the upper and lower credit scores recorded, for reducing variable count in analyses
+DelinquenciesLast7Years | Much like other variables here, useful for understanding likelihood of defaults/full repayments of borrowers with differing amounts of historical delinquency.
+StatedMonthlyIncome | Provides economic context for the borrowers
+LoanOriginalAmount | Important base information about the nature of each loan
+MonthlyLoanPayment | Important base information about the nature of each loan
 
-My hypothesis is that conservative states will show a tendency to choose less
-climate-friendly energy mix choices in the last 10 - 12 years, but that every 
-state will show a lack of interest in climate-friendly energy options prior 
-to 2006, given that that was the year in which 
-[*An Inconvient Truth*](https://en.wikipedia.org/wiki/An_Inconvenient_Truth) 
-premiered. 
+```{r Getting Only the Variables We Care About}
+#Let's now subset the loan data so we're only looking at the variables we
+#care about
 
-As a scientist myself, I also hope to see some changes towards cleaner energy
-appear in the data as early as 1998, as this was when the now-famous 
-["Hockey Stick plot paper"](https://www.theatlantic.com/technology/archive/2013/05/the-hockey-stick-the-most-controversial-chart-in-science-explained/275753/) by Michael Mann, *et al.*
-was published, showing that "Recent northern hemisphere temperatures had been 
-'warmer than any other year since (at least) AD 1400'" and paving the way to
-the more robust conversations about anthropogenic (man-made) climate change. 
-Given that the electricity sector currently accounts for 
-[27% of U.S. greenhouse gas emissions](https://www.epa.gov/ghgemissions/sources-greenhouse-gas-emissions)
-as of 2015, this seems like a relevant data set to dive into.
+chosen_columns <- c("ListingCreationDate",
+                     "Term",
+                     "LoanStatus",
+                     "ClosedDate",
+                     "BorrowerAPR",
+                     "BorrowerRate",
+                     "LenderYield",
+                     "ListingCategory..numeric.",
+                     "BorrowerState",
+                     "EmploymentStatus",
+                     "CreditScoreRangeLower",
+                     "CreditScoreRangeUpper",
+                     "DelinquenciesLast7Years",
+                     "StatedMonthlyIncome",
+                     "LoanOriginalAmount",
+                     "MonthlyLoanPayment")
+
+#Didn't use subset() here as documentation indicates it is not ideal for
+#programmatic use
+loans <- full_data[chosen_columns]
+head(loans)
+```
+
+```{r Cleaning Up the Data}
+#Just a little bit more cleaning to do before we're ready to explore
+
+#' Convert numeric ListingCategory values into descriptive strings.
+#' 
+#' @param x An integer corresponding to a ListingCategory value.
+#' @return The listing category string associated with the input numeric
+#' @examples
+#' cat_num_to_str(2) returns "Home Improvement"
+cat_num_to_str <- function(x) {
+  allowed_values <- c(0:20)
+	if(!(x %in% allowed_values)) {
+		stop("The input value is outside allowed range")}
+  
+  x <- toString(x)
+  category_names <- list("0" = "Not Available", 
+                         "1" = "Debt Consolidation", 
+                         "2" = "Home Improvement", 
+                         "3" = "Business", 
+                         "4" = "Personal Loan", 
+                         "5" = "Student Use", 
+                         "6" = "Auto", 
+                         "7" = "Other", 
+                         "8" = "Baby&Adoption", 
+                         "9" = "Boat", 
+                         "10" = "Cosmetic Procedure", 
+                         "11" = "Engagement Ring", 
+                         "12" = "Green Loans", 
+                         "13" = "Household Expenses", 
+                         "14" = "Large Purchases", 
+                         "15" = "Medical/Dental", 
+                         "16" = "Motorcycle", 
+                         "17" = "RV", 
+                         "18" = "Taxes", 
+                         "19" = "Vacation", 
+                         "20" = "Wedding Loans")
+	
+  return(category_names[[x]])}
+
+
+#Apply our function to every value in the ListingCategory...numeric. variable
+loans$ListingCategory <- vapply(loans$ListingCategory..numeric., 
+                                FUN = "cat_num_to_str", 
+                                FUN.VALUE = "")
+
+#Make the newly-created variable ListingCategory into an unordered Factor
+loans$ListingCategory <- factor(loans$ListingCategory)
+
+head(loans[c("ListingCategory", "ListingCategory..numeric.")])
+
+
+#Add in credit score midpoint variable
+loans$CreditScoreMidpt <- (loans$CreditScoreRangeLower +
+                             loans$CreditScoreRangeUpper) / 2
+
+#We also need to make sure our time series data are recognized by R as time data
+#As such, let's use the lubridate package!
+library(lubridate)
+loans$ListingCreationDate <- ymd_hms(loans$ListingCreationDate)
+```
+
 
 
 # Univariate Plots Section
 
-> **Tip**: In this section, you should perform some preliminary exploration of
-your dataset. Run some summaries of the data and create univariate plots to
-understand the structure of the individual variables in your dataset. Don't
-forget to add a comment after each plot or closely-related group of plots!
-There should be multiple code chunks and text sections; the first one below is
-just to help you get started.
+Let's take a 1D look at each of our variables first to make sure we understand
+what we're working with. We'll start with our time series variable: the Listing
+Creation Date.
 
-```{r echo=FALSE, Univariate_Plots}
+## Loans as a Function of Time
+
+```{r Loans Over Time}
+ggplot(aes(x = ListingCreationDate), data = loans) +
+  #these data are of the type POSIXct and thus the unit it's plotting is
+  #actually seconds. Thus, 1 year = 60 sec * 60 min * 24 hr * 365.25 days
+  geom_histogram(binwidth = (60 * 60 * 24 * 365.25)/12) +
+  scale_x_datetime(date_labels = "%m-%Y", date_breaks = "6 months") +
+  theme(axis.text.x  = element_text(angle = 90))
+```
+
+This is a strange functional dependence of loan count per year over time. It 
+looks like business was booming in the Prosper loan marketplace from its 
+inception in 2006 until 2009, then it jumped back to its Year 1 level of loans
+business. This could be due to a few things:
+
+1. 2008 was the beginning of The Great Recession in the United States. It is
+possible that lenders were skiddish about loaning money through new loan
+mechanisms like peer-to-peer and, likely, they were skiddish about making loans
+in general. Also, borrowers in the Prosper marketplace, much like in many other
+American markets at the time, likely also avoided debt as much as possible,
+while trying to save cash and pay off pre-existing debts as fast as possible.
+
+2. [According to Prosper's Wikipedia page](https://en.wikipedia.org/wiki/Prosper_Marketplace),
+the marketplace faced a class action lawsuit starting in November 2008 that, 
+among other things, took issue with the way Prosper managed its loans and the
+geographic variability it allowed for in its lenders. As a result, the pre-2009
+model Propser had used for setting interest rates on loans (an eBay-style Dutch
+auction system wherein lenders could bid on the interest rates and loans) was
+replaced with a system wherein Prosper set interest rates itself, using data
+it had on hand about the borrower and other elements of the lending ecosystem.
+It is possible that this change in business model was jarring to existing users
+who then became disenchanted during the adjustment period to the new model.
+
+3. Along the same lines as the preceding point, there is one more possibility:
+simple geographic limitation. As part of registering its new model and loans
+with the SEC in July 2009, Prosper also limited its pool of allowable lenders
+to 28 states in the US and only allowed borrowers from 47 states. While the
+Wikipedia article referenced earlier doesn't specify what Prosper's pre-existing
+geographic coverage for lenders and borrowers was, it seems likely that it was
+broader than the post-2009 coverage, suggesting that Prosper's new model 
+effectively locked some of its pre-existing customers out of its marketplace,
+which would of course also account for the significant drop in loans in 2009.
+
+**A valid question to ask:** is it useful to compare loans made 2006-2008 to
+the rest of the portfolio in this data set? For now, I'm going to keep those 
+earlier loans, as the Great Recession period likely has interesting elements
+that echo throughout the later loans, but we'll need to keep a wary eye on that
+time period, given the amount of change that Prosper experienced. For example,
+the auction-style rate-setting likely produced defaults at a similar rate to
+the later preset rates model, but we should expect a lot more variability in 
+rates pre-2009. So it will likely depend upon the variables we choose to use and
+may require filtering out earlier loans depending on the impact they have on
+our analysis.
+
+## Distribution of Loan Term Lengths
+
+```{r Loan Length Distribution}
 
 ```
 
-> **Tip**: Make sure that you leave a blank line between the start / end of
-each code block and the end / start of your Markdown text so that it is
-formatted nicely in the knitted text. Note as well that text on consecutive
-lines is treated as a single space. Make sure you have a blank line between
-your paragraphs so that they too are formatted for easy readability.
 
 # Univariate Analysis
 
@@ -94,14 +234,14 @@ gather your observations and add your own if you have other thoughts!
 
 ### What is/are the main feature(s) of interest in your dataset?
 
-### What other features in the dataset do you think will help support your \
-investigation into your feature(s) of interest?
+### What other features in the dataset do you think will help support your 
+###investigation into your feature(s) of interest?
 
 ### Did you create any new variables from existing variables in the dataset?
 
-### Of the features you investigated, were there any unusual distributions? \
-Did you perform any operations on the data to tidy, adjust, or change the form \
-of the data? If so, why did you do this?
+### Of the features you investigated, were there any unusual distributions? 
+### Did you perform any operations on the data to tidy, adjust, or change the 
+### form of the data? If so, why did you do this?
 
 
 # Bivariate Plots Section
