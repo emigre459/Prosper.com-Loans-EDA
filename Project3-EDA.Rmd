@@ -159,8 +159,14 @@ loans$ListingCreationDate <- ymd_hms(loans$ListingCreationDate)
 # Univariate Plots Section
 
 Let's take a 1D look at each of our variables first to make sure we understand
-what we're working with. We'll start with our time series variable: the Listing
-Creation Date.
+what we're working with. We'll start with taking a look at the data set's
+structure and size.
+
+```{r Basic Data Characteristics}
+str(loans)
+```
+
+We are dealing with a data set that contains 113,937 observations (AKA loans) of  18 variables.
 
 ## Loans as a Function of Time
 
@@ -173,10 +179,10 @@ ggplot(aes(x = ListingCreationDate), data = loans) +
   theme(axis.text.x  = element_text(angle = 90))
 ```
 
-This is a strange functional dependence of loan count per year over time. It 
+This is a strange functional dependence of loan count (per month) over time. It 
 looks like business was booming in the Prosper loan marketplace from its 
-inception in 2006 until 2009, then it jumped back to its Year 1 level of loans
-business. This could be due to a few things:
+inception in 2006 until 2009, then it did a hard reset on its business. This 
+could be due to a few things:
 
 1. 2008 was the beginning of The Great Recession in the United States. It is
 possible that lenders were skiddish about loaning money through new loan
@@ -205,6 +211,13 @@ geographic coverage for lenders and borrowers was, it seems likely that it was
 broader than the post-2009 coverage, suggesting that Prosper's new model 
 effectively locked some of its pre-existing customers out of its marketplace,
 which would of course also account for the significant drop in loans in 2009.
+
+While it is certainly possible that The Great Recession caused this drop in 
+business we're observing, I think it's far more likely that the lawsuit and
+change in business model are mostly to blame. The loan counts from May 2008 to 
+November 2008 show a decline, but it is relatively steady in nature. The sudden
+zero-ing out of business from November 2008 to May 2009 seems too drastic to
+simply chalk up to a strained market.
 
 **A valid question to ask:** is it useful to compare loans made 2006-2008 to
 the rest of the portfolio in this data set? For now, I'm going to keep those 
