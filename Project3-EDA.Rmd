@@ -232,10 +232,147 @@ our analysis.
 
 ## Distribution of Loan Term Lengths
 
-```{r Loan Length Distribution}
+```{r Summary of Loan Term Lengths}
 
+str(loans$Term)
+summary(loans$Term)
 ```
 
+
+```{r Loan Term Length Distribution}
+ggplot(aes(x = Term), data = loans) +
+  geom_histogram() + 
+  scale_x_continuous(breaks = c(12, 36, 60))
+```
+
+Based upon this distribution and the summary data from earlier, it is clear that
+there are really only 3 terms available to borrowers: 12, 36, and 60 months. As
+such, we'll make this variable into a factor, as any further analysis using this 
+variable (e.g. a regression) should not assume`Term` is a continuous variable 
+when it really isn't.
+
+```{r Factoring Term Variable}
+library(ggthemes)
+library(gridExtra)
+
+loans$Term <- factor(loans$Term)
+
+p_term <- ggplot(aes(x = Term), data = loans) +
+  geom_bar() +
+  scale_y_continuous(limits = c(0,90000))
+
+p_term_fraction <- ggplot(aes(x = Term), data = loans) +
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  scale_y_continuous(labels = scales::percent,
+                     breaks = seq(0,1,0.05))
+
+grid.arrange(p_term, p_term_fraction, ncol = 2)
+```
+
+There we go! This is much more intuitive to view than the original 
+continuous-variable version. We can now see clearly that 36-month term loans 
+comprise about 77% of all loans in our data set, 60-month terms are around 22%, 
+leaving only about 1-2% of all loans as 12-month ones.
+
+## Distribution of Loan Status
+
+```{r Summary of Loan Statuses}
+str(loans$LoanStatus)
+summary(loans$LoanStatus)
+```
+
+So we have a bunch of different statuses, included 6 Past Due statuses that are
+given further context by the length of delinquency. Note here that "Chargedoff" 
+is a term usually applied by the lender to indicate that the loan is Defaulted 
+and unlikely to be collected upon. As this is effectively a permanent status, 
+it is perhaps unsurprising that it should have the third highest count of 
+the statuses, as it can never be turned it another status over time. Let's take
+a look at this visually.
+
+```{r Loan Status Distribution}
+ggplot(aes(x = LoanStatus), data = loans) +
+  geom_bar() +
+  theme(axis.text.x  = element_text(angle = 45, hjust = 1))
+```
+
+Given how large the differences are between the dominant statuses ("ChargedOff",
+"Completed", "Current", and "Defaulted"), let's transform to a log scale, shall
+we?
+
+```{r Loan Status Distribution - Log(y)}
+ggplot(aes(x = LoanStatus), data = loans) +
+  geom_bar() +
+  theme(axis.text.x  = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous("log_10(count)", 
+                     breaks = c(10,100,1000,10000,100000, 50000),
+                     trans = scales::log10_trans())
+```
+
+The shape of this distribution is now a little more obvious for low signals,
+but it still seems like something is missing visually. Let's try making 
+`LoanStatus` an ordered factor, with the following ranking (with more positive
+loan outcomes being ranked more highly):
+
+Factor Level Rank | Factor Level
+--- | ---
+1 | Completed
+2 | FinalPaymentInProgress
+3 | Current
+4 | Cancelled
+5 | Past Due (1-15 days) 
+6 | Past Due (16-30 days)
+7 | Past Due (31-60 days)
+8 | Past Due (61-90 days)
+9 | Past Due (91-120 days)
+10 | Past Due (>120 days)
+11 | Defaulted
+12 | Chargedoff
+
+"Cancelled" is placed in the rankings where it is due to the variety of possible
+scenarios in which cancellation could occur. It is not always objectively a
+*good* outcome, but is generally viewed as more positive than being past due, 
+defaulted, or considered charged off.
+
+```{r Ordering Loan Status Variable}
+
+status_order <- c("Completed", "FinalPaymentInProgress", "Current",
+                  "Cancelled", "Past Due (1-15 days)", "Past Due (16-30 days)",
+                  "Past Due (31-60 days)", "Past Due (61-90 days)",
+                  "Past Due (91-120 days)", "Past Due (>120 days)",
+                  "Defaulted", "Chargedoff")
+
+loans$LoanStatus <- factor(loans$LoanStatus, levels = status_order)
+
+
+levels(loans$LoanStatus)
+```
+
+OK, now we've got these statuses ordered the way that is most useful to us,
+so let's see how these distributions (linear and log10) change.
+
+```{r Ordered Loan Status Distribution - Linear and Log10}
+
+p_status <- ggplot(aes(x = LoanStatus), data = loans) +
+  geom_bar() +
+  theme(axis.text.x  = element_text(angle = 45, hjust = 1))
+
+p_status_log <- ggplot(aes(x = LoanStatus), data = loans) +
+  geom_bar() +
+  theme(axis.text.x  = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous("log_10(count)",
+                     trans = scales::log10_trans())
+
+grid.arrange(p_status, p_status_log)
+```
+
+This is helpful. It's now more clear that the difference in counts in Past Due
+loans is not really significant, except for a slightly larger number for the
+1-15 days bucket and a slightly smaller number for the >120 days bucket, both
+of which are understandable. For the former, it's easy to be slightly late on 
+your payments through forgetfulness or a misalignment of your income timeline 
+and loan payment timeline. For the latter, I'd expect that many people, when 
+informed that they are at risk of being put into Default status, get their 
+payments in to avoid being forced to pay off the loan fully in that moment.
 
 # Univariate Analysis
 
