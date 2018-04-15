@@ -258,15 +258,15 @@ ggplot(aes(x = Term), data = loans) +
 
 Based upon this distribution and the summary data from earlier, it is clear that
 there are really only 3 terms available to borrowers: 12, 36, and 60 months. As
-such, we'll make this variable into a factor, as any further analysis using this 
-variable (e.g. a regression) should not assume`Term` is a continuous variable 
-when it really isn't.
+such, we'll make this variable into an ordered factor, as any further analysis
+using this variable (e.g. a regression) should not assume`Term` is a continuous 
+variable when it really isn't.
 
 ```{r Factoring Term Variable}
 library(ggthemes)
 library(gridExtra)
 
-loans$Term <- factor(loans$Term)
+loans$Term <- factor(loans$Term, levels = c(12, 36, 60), ordered = TRUE)
 
 p_term <- ggplot(aes(x = Term), data = loans) +
   geom_bar() +
@@ -352,7 +352,10 @@ status_order <- c("Completed", "FinalPaymentInProgress", "Current",
                   "Past Due (91-120 days)", "Past Due (>120 days)",
                   "Defaulted", "Chargedoff")
 
-loans$LoanStatus <- factor(loans$LoanStatus, levels = status_order)
+status_order <- rev(status_order)
+
+loans$LoanStatus <- factor(loans$LoanStatus, levels = status_order, 
+                           ordered = TRUE)
 
 
 levels(loans$LoanStatus)
@@ -716,7 +719,8 @@ summary(loans$DelinquenciesLast7Years)
 
 ```{r Distribution of DelinquenciesLast7Years}
 ggplot(data = loans, aes(x = DelinquenciesLast7Years)) +
-  geom_histogram(binwidth = 1)
+  geom_histogram(binwidth = 1, aes(y = ..count../sum(..count..))) +
+  scale_y_continuous(breaks = seq(0,0.7,0.1))
 ```
 
 Clearly, a majority of borrowers had no delinquencies on their records. This is
@@ -856,31 +860,83 @@ our work with more than one variable will illuminate this pattern a bit more
 
 # Univariate Analysis
 
-> **Tip**: Now that you've completed your univariate explorations, it's time to
-reflect on and summarize what you've found. Use the questions below to help you
-gather your observations and add your own if you have other thoughts!
-
 ### What is the structure of your dataset?
 
+It is a data set of 113,937 observations (loans) and 18 variables. The variables
+are (grouped whenever they are related):
+
+1. ListingCreationDate
+2. Term
+3. ClosedDate
+4. LoanStatus
+5. BorrowerAPR and BorrowerRate
+6. LenderYield
+7. ListingCategory and ListingCategory..numeric.
+8. BorrowerState
+9. EmploymentStatus
+10. CreditScoreRangeLower, CreditScoreRangeUpper, and CreditScoreMidpt
+11. DelinquenciesLast7Years
+12. StatedMonthlyIncome
+13. LoanOriginalAmount
+14. MonthlyLoanPayment
+
+ListingCategory, EmploymentStatus, and BorrowerState are unordered factors;
+Term and LoanStatus are ordered factors. The levels of them are as follows:
+
+* ListingCategory: 21 types of end-uses for loans, including things like Debt Consolidation, Baby&Adoption, and Engagement Ring.
+* EmploymentStatus: "", Employed, Full-Time, Not Available, Not employed, Other, Part-time, Retired, and Self-employed
+* BorrowerState: all 50 US states + Puerto Rico and Washington, DC
+* Term: 12 < 36 < 60 (all in units of months)
+* LoanStatus: ordered as follows (least to greatest)
+  * Chargedoff
+  * Defaulted
+  * Past Due (>120 days)
+  * Past Due (91-120 days)
+  * Past Due (61-90 days)  
+  * Past Due (31-60 days)
+  * Past Due (16-30 days)
+  * Past Due (1-15 days)
+  * Cancelled
+  * Current
+  * FinalPaymentInProgress
+  * Completed
+  
+
 ### What is/are the main feature(s) of interest in your dataset?
+
+The main features I'm most interested in are the loan statuses (trying to understand what characteristics tend to make for a well-paid or delinquent loan) and the listing date for each loan, given the complete drop in loans as of 2009, likely due to the Great Recession and/or Prosper significantly changing its rate-setting model. I suspect that there will be important changes in the explanatory variables as a function of time. Mainly, however, I'm interested in being able to build a predictive model of good and poor borrowers.
 
 ### What other features in the dataset do you think will help support your 
 ###investigation into your feature(s) of interest?
 
+The other variables are mostly useful in this investigation as well, particularly `CreditScoreMidpt`, `ListingCategory`, `StatedMonthlyIncome`, `DelinquenciesLast7Years`, `MonthlyLoanPayment`, `BorrowerRate`, and `EmploymentStatus`. Here are the major outcomes observed thus far:
+
+
 ### Did you create any new variables from existing variables in the dataset?
+
+For the credit score data, I created `CreditScoreMidpt` in order to condense and simplify the data from `CreditScoreRangeUpper` and `CreditScoreRangeLower` by taking the midpoint between this pair of variables for each observation.
+
+I also mapped the original numercially-coded `ListingCategory..numeric.` variable to a new variable `ListingCategory` that transforms the original numeric encoding into human-readable categories.
 
 ### Of the features you investigated, were there any unusual distributions? 
 ### Did you perform any operations on the data to tidy, adjust, or change the 
 ### form of the data? If so, why did you do this?
 
+As stated earlier, there is a curious drop in loan activity in 2009 that I am going to investigate further. Other oddities I noted:
+
+2. The loans largely have very high interest rates, with a surprisingly large number of loans taking an abnormally high value of APR and Rate, outside of the relatively smooth distribution of rates seen for the rest of the portfolio
+7. Distribution of borrower credit scores is mostly normal and centered around 680, with some outliers near zero and and a small peak around 520 - 540.
+8. The majority of borrowers (~67%) have no delinquencies in the last 7 years, but there are some who have 99 or more.
+10. Monthly loan payments trend downward in frequency with increasing payment amount, not a surprising trend. However, they were multi-modal, indicating a variety of payments were particularly popular for some reason, trending from $200/month (the most popular) to \$1350/month
 
 # Bivariate Plots Section
 
-> **Tip**: Based on what you saw in the univariate plots, what relationships
-between variables might be interesting to look at in this section? Don't limit
-yourself to relationships between a main output feature and one of the
-supporting variables. Try to look at relationships between supporting variables
-as well.
+Here are some of the bivariate comparisons I plan to make, based upon my earlier observations:
+
+* 
+
+Let's start, however, by doing a matrix of 2D plots to compare each variable to the others (I expect this to be VERY dense, but let's give it a go to see if there's anything unexpected). At this point, I feel comfortable ignoring 
+`LenderYield`, `ListingCategory..numeric.`, and the upper and lower credit score range bounds.
 
 ```{r echo=FALSE, Bivariate_Plots}
 
