@@ -152,6 +152,7 @@ loans$CreditScoreMidpt <- (loans$CreditScoreRangeLower +
 #As such, let's use the lubridate package!
 library(lubridate)
 loans$ListingCreationDate <- ymd_hms(loans$ListingCreationDate)
+
 ```
 
 
@@ -171,12 +172,14 @@ We are dealing with a data set that contains 113,937 observations (AKA loans) of
 ## Loans as a Function of Time
 
 ```{r Loans Over Time}
-ggplot(aes(x = ListingCreationDate), data = loans) +
+p_listingDate <- ggplot(aes(x = ListingCreationDate), data = loans) +
   #these data are of the type POSIXct and thus the unit it's plotting is
   #actually seconds. Thus, 1 year = 60 sec * 60 min * 24 hr * 365.25 days
   geom_histogram(binwidth = (60 * 60 * 24 * 365.25)/12) +
   scale_x_datetime(date_labels = "%m-%Y", date_breaks = "6 months") +
   theme(axis.text.x  = element_text(angle = 90))
+
+p_listingDate
 ```
 
 This is a strange functional dependence of loan count (per month) over time. It 
@@ -229,6 +232,14 @@ the later preset rates model, but we should expect a lot more variability in
 rates pre-2009. So it will likely depend upon the variables we choose to use and
 may require filtering out earlier loans depending on the impact they have on
 our analysis.
+
+While it seems fairly likely that we've explained the 2008 oddity in
+`ListingCreationDate here`, I do still wonder about the late-2012/early-2013 dip 
+in loans. My research thus far has not indicated a good reason why this may have 
+occurred. Some additional investor funding in Prosper as a company occurred 
+during this time, but there are other (smaller and bigger) rounds of investing 
+that occurred outside of that time period, so that doesn't seem like a 
+sufficient explanation. 
 
 ## Distribution of Loan Term Lengths
 
@@ -362,8 +373,13 @@ p_status_log <- ggplot(aes(x = LoanStatus), data = loans) +
   scale_y_continuous("log_10(count)",
                      trans = scales::log10_trans())
 
-grid.arrange(p_status, p_status_log)
+p_status
 ```
+
+```{r}
+p_status_log
+```
+
 
 This is helpful. It's now more clear that the difference in counts in Past Due
 loans is not really significant, except for a slightly larger number for the
@@ -373,6 +389,470 @@ your payments through forgetfulness or a misalignment of your income timeline
 and loan payment timeline. For the latter, I'd expect that many people, when 
 informed that they are at risk of being put into Default status, get their 
 payments in to avoid being forced to pay off the loan fully in that moment.
+
+## Distribution of Closed Date
+
+First, we need to convert closing dates from a factor with string levels to 
+date and time values that R recognizes, like we did with the loan listing dates.
+
+```{r Convert Closing Dates to Be A Date Variable}
+loans$ClosedDate <- ymd_hms(loans$ClosedDate)
+str(loans$ClosedDate)
+```
+
+OK, time to plot this up!
+
+```{r Distribution of Closing Dates}
+p_closedDate <- ggplot(aes(x = ClosedDate), data = loans) +
+  #these data are of the type POSIXct and thus the unit it's plotting is
+  #actually seconds. Thus, 1 year = 60 sec * 60 min * 24 hr * 365.25 days
+  geom_histogram(binwidth = (60 * 60 * 24 * 365.25)/12) +
+  scale_x_datetime(date_labels = "%m-%Y", date_breaks = "6 months") +
+  theme(axis.text.x  = element_text(angle = 90)) +
+  ggtitle("Closing Dates")
+
+p_closedDate
+```
+
+```{r}
+p_listingDate + ggtitle("Listing Creation Dates")
+```
+
+At first glance, the closing dates distribution doesn't make a lot of sense. Why
+don't we see a sudden dropoff in 2008-2009 like we did with the listing creation
+dates? And why are the numbers for this distribution so much lower? The key here
+is that only a subset (and clearly a limited one at that) of the entire loan
+portfolio would have a closing date (only those with a status of Cancelled, 
+Completed, Chargedoff, or Defaulted in fact). While these are a large portion of
+the portfolio, they are certainly not the entirety of it, explaining the 
+significantly lower counts. And we can see a dip in the close dates around 
+12/2011. Given that we know more than 75% of the loans have 3 year terms, this
+dropoff shouldn't suprise us: this is almost exactly 3 years after the 2008-2009
+dropoff in listing creations. 
+
+## Distribution of Borrower APRs and Rates
+
+As the APR (Annual Percentage Rate) and the base interest rate of loans are
+considered linked (with the APR simply taking into account origination and
+maintenance costs of the loan that the base rate does not), I decided to explore
+these together.
+
+```{r Distribution of APR}
+p_APR <- ggplot(aes(x = BorrowerAPR), data = loans) +
+  geom_histogram(binwidth = 0.005) +
+  scale_x_continuous(breaks = seq(0,0.5,0.025), labels = scales::percent) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#We'll define the center of the broad peak here as being the median value for
+#all APRs less than 35%
+peak_midpt_APR <- median(na.omit(loans$BorrowerAPR[loans$BorrowerAPR < 0.35]))
+
+p_APR + 
+  geom_vline(color = "red", 
+                   xintercept = peak_midpt_APR) +
+  geom_vline(color = "green", xintercept = 0.357)
+```
+
+Oddly enough, it seems like we have a broad peak at 20.05% (defined by the 
+median of the APRs below 35%) and a narrow jump at 35.7%. Yikes, those are some high rates!
+
+```{r Distribution of Rates}
+p_Rate <- ggplot(aes(x = BorrowerRate), data = loans) +
+  geom_histogram(binwidth = 0.005) +
+  scale_x_continuous(breaks = seq(0,0.5,0.025), labels = scales::percent,
+                     limits = c(0, 0.4)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#We'll define the center of the first broad peak here as being the median value 
+#for all Rates less than 22.5% and the second for 22.5% <= Rates < 31%
+peak_midpt_Rate_1 <- median(na.omit(loans$BorrowerRate[loans$BorrowerRate < 0.225]))
+
+peak_midpt_Rate_2 <- median(na.omit(loans$BorrowerRate[loans$BorrowerRate < 0.31
+                                                       & loans$BorrowerRate >= 0.225]))
+
+
+p_Rate + 
+  geom_vline(color = "red", 
+             xintercept = peak_midpt_Rate_1) +
+  geom_vline(color = "blue", 
+             xintercept = peak_midpt_Rate_2) +
+  geom_vline(color = "green", xintercept = 0.32)
+```
+
+Oddly enough, it seems like we have a broad peak at 14.99% (defined by the 
+median of the APRs below 22.5%), another broad peak at 26.24% (this time defined
+by the median of the Rates between 22.5% and 31%) and a narrow jump at 32%. As 
+we had guessed, these values are lower than the APR values, as they reflect only
+the bare interest rates of the loans, not the total cost of origination and
+maintenance too. 
+
+What's interesting is the functional form however - why are there so many peaks
+and some high-rate delta functions? Perhaps the answer lies in the time series 
+data. Let's take a look at these same data, but from pre- and post-2009.
+
+```{r APRs and Rates in Different Time Periods}
+p_APR_pre2009 <- ggplot(aes(x = BorrowerAPR), 
+                        data = subset(loans, ListingCreationDate < 
+                                        ymd("09-01-01"))) +
+  geom_histogram(binwidth = 0.005) +
+  scale_x_continuous(breaks = seq(0,0.5,0.025), labels = scales::percent) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggtitle("Pre-2009 APRs")
+
+p_APR_post2009 <- ggplot(aes(x = BorrowerAPR), 
+                        data = subset(loans, ListingCreationDate >= 
+                                        ymd("09-01-01"))) +
+  geom_histogram(binwidth = 0.005) +
+  scale_x_continuous(breaks = seq(0,0.5,0.025), labels = scales::percent) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggtitle("2009 and Later APRs")
+
+p_Rate_pre2009 <- ggplot(aes(x = BorrowerRate), 
+                         data = subset(loans, ListingCreationDate < 
+                                         ymd("09-01-01"))) +
+  geom_histogram(binwidth = 0.005) +
+  scale_x_continuous(breaks = seq(0,0.5,0.025), labels = scales::percent,
+                     limits = c(0, 0.4)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggtitle("Pre-2009 Rates")
+
+p_Rate_post2009 <- ggplot(aes(x = BorrowerRate), 
+                         data = subset(loans, ListingCreationDate >= 
+                                         ymd("09-01-01"))) +
+  geom_histogram(binwidth = 0.005) +
+  scale_x_continuous(breaks = seq(0,0.5,0.025), labels = scales::percent,
+                     limits = c(0, 0.4)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggtitle("2009 and Later Rates")
+
+grid.arrange(p_APR_pre2009, p_APR_post2009, p_Rate_pre2009, p_Rate_post2009,
+             ncol = 2)
+```
+
+How strange! I had expected that some of the features would disappear in one time period or the other, but both exhibit this low-rate broad peak and high-rate
+spikes. I'm not sure what would be causing that, but it is interesting to note
+that the overall trends of both rate types seem to be smoother in 2009 and 
+later, perhaps as a result of the new rate-setting mechansim Prosper employed.
+However, that time period also has more data points, so the smoothing could just
+be a reflection of the size of the sample (although with 29,056 (25.5% of the
+total data set we're working) loans prior to 1/1/2009, it seems like the sample
+size would be more than sufficient).
+
+## Lender Yield
+
+Let's now explore how well lenders did in allowing their money to be borrowed out through the Prosper platform.
+
+```{r Summary of Lender Yields}
+print("Structure and Summary Statistics of LenderYield")
+str(loans$LenderYield)
+summary(loans$LenderYield)
+```
+
+```{r Distribution of Lender Yields}
+p_Yield <- ggplot(aes(x = LenderYield), data = loans) +
+  geom_histogram(binwidth = 0.005) +
+  scale_x_continuous(breaks = seq(0,0.5,0.025), labels = scales::percent,
+                     limits = c(0, 0.4)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+grid.arrange(p_Yield, p_Rate)
+```
+
+These look...extremely similar. In fact, a look at the data catalog makes us 
+realize that the lender yield is a calculation that simply subtracts the 
+servicing fee from the interest rate of a given loan. We would thus expect a
+perfect correlation between these variables. We'll make sure to test that in
+section on Bivariate Plots/Analysis.
+
+## Listing Category
+
+As we've done previously, here we'll inspect the structure of the data, run
+some summary statistics, and generate a basic plot to make sure we know what 
+we're looking at. As we've already gone through the trouble of providing human-
+readable values for this variable, we won't bother investigating the numeric
+version of this variable.
+
+```{r Summary of Listing Category}
+str(loans$ListingCategory)
+summary(loans$ListingCategory)
+```
+
+```{r Distribution of Listing Category}
+p_ListCat <- ggplot(aes(x = ListingCategory), data = loans) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4))
+
+p_ListCat
+p_ListCat + scale_y_log10("Log_10(count)")
+```
+
+```{r Ranking Loan Categories}
+print("What is the ranking of these categories, from least count to greatest?")
+levels(reorder(loans$ListingCategory, loans$ListingCategory, FUN = length))
+```
+
+We can see in the linear and log-transformed plots here that by far the most
+common use for these loans is debt consolidation, even if the next-highest-count
+category had all of the Not Available and Other counts added to it. Speaking of,
+these are the categories with the next highest counts, resp., which really isn't
+that surprising since they are catch-all categories. 
+
+When only considering explicit categories (in other words, not Not Available or
+Other), the top 5 in descending order are:
+
+1. Debt Consolidation
+2. Home Improvement
+3. Business
+4. Auto
+5. Personal Loan
+
+I don't see anything particularly surprising about this. If anything, the
+biggest surprise to me out of all of this is that Wedding Loans and Engagement
+Ring rank higher in frequency than Baby&Adoption. Anyone with kids knows that
+they are far more expensive than the vast majority of weddings and rings!
+
+## Borrower State
+
+Let's take a look at some geographic diversity aspects of these loans.
+
+```{r Summary of BorrowerState}
+str(loans$BorrowerState)
+summary(loans$BorrowerState)
+
+print("Loans by state, ordered by increasing frequency")
+levels(reorder(loans$BorrowerState, loans$BorrowerState, FUN = length))
+```
+
+```{r Distribution of BorrowerStates}
+ggplot(aes(x = BorrowerState), data = loans) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4))
+```
+
+There are clearly some states dominating the borrower landscape here. However,
+I wonder: is this dominance in borrower count a result of simply population
+differences between the states, or something else (e.g. CA is where Prosper is
+headquartered and CA residents always love to jump on the newest tech 
+bandwagon as soon as possible).  Normalizing these data by state population 
+(in other words, number of loans per capita) is something we'll tackle in the
+bivariate analysis section of this report. Stay tuned!
+
+## Employment Status
+
+Let's take a look at the structure and distribution of another interesting
+explanatory variable: borrowers' employment statuses.
+
+```{r Structure and Summary of EmploymentStatus}
+str(loans$EmploymentStatus)
+summary(loans$EmploymentStatus)
+```
+
+It looks like this variable may be a tad tricky, as one would expect that 
+"Full-time", "Part-time", and "Self-employed" would all be part of the set 
+"Employed" but they're treated as separate levels. Likely this means that 
+Prosper started asking for more (or less) detail about employment status as 
+time went on. Let's plan to investigate this variable over time in the bivariate
+analysis section.
+
+```{r Distribution of EmploymentStatus}
+ggplot(aes(x = EmploymentStatus), data = loans) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+By far, the borrowers were employed, and (even though Employed is a pretty
+low-resolution value for this variable) likely those who are just employed are
+full-time. Later we'll take a look at the correlation between employment types 
+and loan status, as it seems plausible that those who are employed full-time 
+will find it easier to make payments on time and close their accounts in good 
+standing.
+
+## Credit Scores
+
+Now we'll explore the credit scores of different borrowers. As these were 
+provided in the original data set as upper and lower ends of ranges, I chose to
+create a variable in the data frame that was the midpoint value of each range, 
+to simplify analysis without losing resolution. Even though there are a limited
+number of possible values for this variable, I chose to keep it as a numeric
+instead of a factor, so regression analysis could be done if desired.
+
+```{r Structure and Summary of CreditScoreMidpt}
+str(loans$CreditScoreMidpt)
+summary(loans$CreditScoreMidpt)
+```
+
+```{r Distribution of Credit Scores}
+ggplot(data = loans, aes(x = CreditScoreMidpt)) +
+  geom_histogram(binwidth = 20) +
+  scale_x_continuous(breaks = seq(0, 900, 40)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = loans, aes(x = CreditScoreMidpt)) +
+  geom_histogram(binwidth = 20) +
+  scale_x_continuous(limits = c(400,900),
+                     breaks = seq(0, max(900), 40))
+```
+
+It's not entirely obvious why there are values near zero here, likely that's
+an artifact of faulty data (e.g. a missing digit from the credit reporting
+agency or poor manual data entry). We ignore that unlikely outlier and zoom in
+on the 400 to 900 range.
+
+In the zoomed in range, we see an interesting and somewhat unexepcted 
+distriution of credit scores. It looks like there's a small spike in loans for
+those with credit scores in the 520 - 540 range, but the main peak is at 680
+(unsurprising, since our early descriptive summary analysis indicates a median 
+of 689). This is not such a strange result, [as the average American credit score in 2017 was 700.](http://time.com/money/5112478/average-credit-score-by-age/)
+
+## Delinquencies
+
+Another interesting potential predictor of loan payments and successful loan
+completion is borrower historic credit delinquencies. Let's take a look at that.
+
+```{r Structure and Summary of DelinquenciesLast7Years}
+str(loans$DelinquenciesLast7Years)
+summary(loans$DelinquenciesLast7Years)
+```
+
+```{r Distribution of DelinquenciesLast7Years}
+ggplot(data = loans, aes(x = DelinquenciesLast7Years)) +
+  geom_histogram(binwidth = 1)
+```
+
+Clearly, a majority of borrowers had no delinquencies on their records. This is
+some seriously long-tailed data. Let's do a log10 transform to see what's really
+going on here.
+
+```{r Log-scale Distribution of DelinquenciesLast7Years}
+ggplot(data = loans, aes(x = DelinquenciesLast7Years)) +
+  geom_histogram(binwidth = 1) +
+  scale_y_continuous("log_10(count)", trans = scales::log10_trans())
+```
+
+How odd! Why would there be a such an up-tick in delinquencies at the value 99?
+Likely this is a reporting artifact (e.g. credit bureaus only reported 99 for
+borrowers with 99+ delinquencies). A quick Googling doesn't shed much light on
+this, but given that the trend is quite smooth on a log-scale down to 98, I'm
+willing to assume that this isn't a meaningful data point. Interestingly, while
+credit scores are pretty normally distributed in this group, delinquencies are
+not. This likely indicates that delinquencies have a strongly negative effect
+on scores, given that the majority of our borrowers have no delinquencies on
+record. But really, we don't have sufficient data for that, we'd need to do
+a correlational analysis on credit scores and delinquencies. Don't worry - we'll
+do just that soon enough!
+
+## Borrowers' Monthly Incomes
+
+Another interesting explantory variable - monthly income. This is a nice
+continuous variable that can give us more resolution than `EmploymentStatus`
+when it comes to things like loan payment status. Let's dig into it.
+
+```{r Summary and Structure of StatedMonthlyIncome}
+str(loans$StatedMonthlyIncome)
+summary(loans$StatedMonthlyIncome)
+```
+
+```{r Distribution of StatedMonthlyIncome}
+ggplot(data = loans, aes(x = StatedMonthlyIncome)) +
+  geom_histogram(binwidth = 1000) +
+  scale_x_continuous(breaks = seq(0,2E6,1E5)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4))
+
+ggplot(data = loans, aes(x = StatedMonthlyIncome)) +
+  geom_histogram(binwidth = 1000) +
+  scale_x_continuous(breaks = seq(0,2E6,1E5)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4)) +
+  scale_y_log10("Log_10(count)")
+```
+
+These data clearly have some outliers. Using the standard definition of an
+outlier as being data with values >= 1.5 * IQR + 3rd_quartile, we find that 
+outliers here are defined as being greater than $12262.50. Let's look at some
+plots limiting ourselves to that.
+
+```{r Distribution of StatedMonthlyIncome - Zoomed}
+
+ggplot(data = loans, aes(x = StatedMonthlyIncome)) +
+  geom_histogram(binwidth = 200) +
+  scale_x_continuous(limits = c(0,12262.50), breaks = seq(0,12262.50,1000)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4)) +
+  geom_vline(xintercept = 4000, color = "red")
+
+ggplot(data = loans, aes(x = StatedMonthlyIncome)) +
+  geom_histogram(binwidth = 200) +
+  scale_x_continuous(limits = c(0,12262.50), breaks = seq(0,12262.50,1000)) +
+  scale_y_log10("Log_10(count)") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4))
+```
+
+Taking this outlier definition results in a loss of about 5% of the records,
+which seems reasonable for exploratory purposes. Given that only about 
+[15% of US households make more than this](https://www.statista.com/statistics/203183/percentage-distribution-of-household-income-in-the-us/), 
+I think it's a pretty reasonable cutoff for our purposes. There's not too much
+that stands out in these data, other than the pretty regular spikes every $400.
+Perhaps this has something to do with the human tendency to round to the nearest
+500 or 1000? That's not clear.
+
+Also, I should note that the peak of this variable is around 4000, although
+this is a bit further removed from the median value of 4667 than I was expecting.
+
+## Amount Loaned
+
+In order to understand the nature of the loans in our data set, we should also
+probably know how much each was worth!
+
+```{r Structure and Summary of LoanOriginalAmount}
+str(loans$LoanOriginalAmount)
+summary(loans$LoanOriginalAmount)
+```
+
+```{r Distribution of LoanOriginalAmount}
+ggplot(data = loans, aes(x = LoanOriginalAmount)) +
+  geom_histogram(binwidth = 500) +
+  scale_x_continuous(breaks = seq(0,35000,1000)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4))
+```
+
+There are peaks at \$10000, \$15000, and \$25000 - none of these are particularly
+suprising, given how nice and round those values are. They were likely just a 
+stab in the dark by the borrower regarding how much they actually needed. The
+surprising data point though, is also the largest peak: \$4000. What is so 
+common of an item/service that it requires a \$4000 loan? Given that the largest
+loan category was debt consolidation, perhaps \$4000 is a popular limit to put
+on revolving debt (e.g. credit cards)? That doesn't seem to explain it, as
+the [average credit card limit in 2015 was \$8042](https://smartasset.com/credit-cards/the-average-credit-card-limit).
+How curious.
+
+## Monthly Payments
+
+We now finally come to our final variable of interest, the monthly amount due
+on the loans. I expect that this will correlate strongly with the loan principal
+and also likely the monthly borrower income. For now, though, let's just look
+at its overall spread in our portfolio of loans.
+
+```{r Summary and Structure of MonthlyLoanPayment}
+str(loans$MonthlyLoanPayment)
+summary(loans$MonthlyLoanPayment)
+```
+
+```{r Distribution of MonthlyLoanPayment}
+ggplot(data = loans, aes(x = MonthlyLoanPayment)) +
+  geom_histogram(binwidth = 25) +
+  scale_x_continuous(breaks = seq(0,2251.5,100)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4))
+
+ggplot(data = loans, aes(x = MonthlyLoanPayment)) +
+  geom_histogram(binwidth = 25) +
+  scale_x_continuous(breaks = seq(0,2251.5,100)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4)) +
+  scale_y_log10("Log_10(count)")
+```
+
+Oddly enough, this seems multi-modal with peaks at \$200, \$400, \$525, \$850,
+\$1150, and \$1350. I don't really know what to make of those peaks, but perhaps
+our work with more than one variable will illuminate this pattern a bit more
+(e.g. looking at monthly payment vs. APR).
+
 
 # Univariate Analysis
 
@@ -404,6 +884,39 @@ as well.
 
 ```{r echo=FALSE, Bivariate_Plots}
 
+```
+
+
+
+
+```{r Normalizing Loan Counts by State Population}
+state_pops <- read.csv("Data/Population Estimates by State.csv",
+                     as.is = c(TRUE, TRUE))
+state_abbrevs <- read.csv("Data/State_Abbrevs.csv", 
+                          col.names = c("State", "Abbreviation"),
+                          as.is = c(TRUE, TRUE),
+                          strip.white = TRUE,
+                          header = FALSE)
+#Have to remove the commas from the Population data values and convert them
+# from string to numeric values
+state_pops$Population <- as.numeric(gsub(",","",state_pops$Population))
+state_pops$Abbreviation <- state_abbrevs$Abbreviation
+
+```
+
+```{r}
+library(dplyr)
+#How to plot x = state, y = ..count../state_pop?
+#loans$BorrowerState.Population <- 
+#' Takes a state abbreviation (e.g. "OH") and returns its population.
+#' 
+#' @param x A state's 2-letter abbreviation as a string
+#' @return The population of \code{x} in 2017, as a numeric.
+#' @examples
+#' state_populator("DC")
+state_populator <- function(x) {
+  return(state_pops[state_pops$Abbreviation == x])
+}
 ```
 
 # Bivariate Analysis
