@@ -234,7 +234,7 @@ may require filtering out earlier loans depending on the impact they have on
 our analysis.
 
 While it seems fairly likely that we've explained the 2008 oddity in
-`ListingCreationDate here`, I do still wonder about the late-2012/early-2013 dip 
+`ListingCreationDate` here, I do still wonder about the late-2012/early-2013 dip 
 in loans. My research thus far has not indicated a good reason why this may have 
 occurred. Some additional investor funding in Prosper as a company occurred 
 during this time, but there are other (smaller and bigger) rounds of investing 
@@ -259,7 +259,7 @@ ggplot(aes(x = Term), data = loans) +
 Based upon this distribution and the summary data from earlier, it is clear that
 there are really only 3 terms available to borrowers: 12, 36, and 60 months. As
 such, we'll make this variable into an ordered factor, as any further analysis
-using this variable (e.g. a regression) should not assume`Term` is a continuous 
+using this variable (e.g. a regression) should not assume `Term` is a continuous 
 variable when it really isn't.
 
 ```{r Factoring Term Variable}
@@ -292,12 +292,12 @@ str(loans$LoanStatus)
 summary(loans$LoanStatus)
 ```
 
-So we have a bunch of different statuses, included 6 Past Due statuses that are
+So we have a bunch of different statuses, including 6 Past Due statuses that are
 given further context by the length of delinquency. Note here that "Chargedoff" 
 is a term usually applied by the lender to indicate that the loan is Defaulted 
 and unlikely to be collected upon. As this is effectively a permanent status, 
 it is perhaps unsurprising that it should have the third highest count of 
-the statuses, as it can never be turned it another status over time. Let's take
+the statuses, as it can never be turned into another status over time. Let's take
 a look at this visually.
 
 ```{r Loan Status Distribution}
@@ -322,7 +322,7 @@ ggplot(aes(x = LoanStatus), data = loans) +
 The shape of this distribution is now a little more obvious for low signals,
 but it still seems like something is missing visually. Let's try making 
 `LoanStatus` an ordered factor, with the following ranking (with more positive
-loan outcomes being ranked more highly):
+loan outcomes being ranked more highly and thereby receiving a lower Factor Level Rank):
 
 Factor Level Rank | Factor Level
 --- | ---
@@ -352,6 +352,7 @@ status_order <- c("Completed", "FinalPaymentInProgress", "Current",
                   "Past Due (91-120 days)", "Past Due (>120 days)",
                   "Defaulted", "Chargedoff")
 
+#Need the most negative categorical value to go first, not the other way around
 status_order <- rev(status_order)
 
 loans$LoanStatus <- factor(loans$LoanStatus, levels = status_order, 
@@ -424,11 +425,11 @@ p_listingDate + ggtitle("Listing Creation Dates")
 At first glance, the closing dates distribution doesn't make a lot of sense. Why
 don't we see a sudden dropoff in 2008-2009 like we did with the listing creation
 dates? And why are the numbers for this distribution so much lower? The key here
-is that only a subset (and clearly a limited one at that) of the entire loan
-portfolio would have a closing date (only those with a status of Cancelled, 
-Completed, Chargedoff, or Defaulted in fact). While these are a large portion of
-the portfolio, they are certainly not the entirety of it, explaining the 
-significantly lower counts. And we can see a dip in the close dates around 
+is that only a subset (and clearly a limited one at that - 48.4% here) of the 
+entire loan portfolio would have a closing date (only those with a status of 
+Cancelled, Completed, Chargedoff, or Defaulted in fact). While these are a large 
+portion of the portfolio, they are certainly not the entirety of it, explaining 
+the significantly lower counts. And we can see a dip in the close dates around 
 12/2011. Given that we know more than 75% of the loans have 3 year terms, this
 dropoff shouldn't suprise us: this is almost exactly 3 years after the 2008-2009
 dropoff in listing creations. 
@@ -537,9 +538,7 @@ spikes. I'm not sure what would be causing that, but it is interesting to note
 that the overall trends of both rate types seem to be smoother in 2009 and 
 later, perhaps as a result of the new rate-setting mechansim Prosper employed.
 However, that time period also has more data points, so the smoothing could just
-be a reflection of the size of the sample (although with 29,056 (25.5% of the
-total data set we're working) loans prior to 1/1/2009, it seems like the sample
-size would be more than sufficient).
+be a reflection of the size of the sample (although with 29,056 loans/25.5% of the total data set we're working with listing prior to 1/1/2009, it seems like the sample size would be more than sufficient).
 
 ## Lender Yield
 
@@ -931,21 +930,51 @@ As stated earlier, there is a curious drop in loan activity in 2009 that I am go
 
 # Bivariate Plots Section
 
-Here are some of the bivariate comparisons I plan to make, based upon my earlier observations:
+Let's start by doing a matrix of 2D plots to compare each variable to the others (I expect this to be VERY dense, but let's give it a go to see if there's anything unexpected). At this point, I feel comfortable ignoring 
+`LenderYield`, `ListingCategory..numeric.`, and the upper and lower credit score range bounds. I've also had to remove a few other columns to make this graphic a bit 
+less unwieldy, but we'll definitely be exploring more than what we see here.
 
-* 
-
-Let's start, however, by doing a matrix of 2D plots to compare each variable to the others (I expect this to be VERY dense, but let's give it a go to see if there's anything unexpected). At this point, I feel comfortable ignoring 
-`LenderYield`, `ListingCategory..numeric.`, and the upper and lower credit score range bounds.
-
-```{r echo=FALSE, Bivariate_Plots}
-
+```{r Many of the Bivariate_Plots Possible!}
+library(GGally)
+ggpairs(select(loans, LoanStatus, BorrowerRate,
+               MonthlyLoanPayment, StatedMonthlyIncome, ListingCategory,
+               CreditScoreMidpt),
+        axisLabels = "internal",
+        cardinality_threshold = 21)
 ```
 
+Interesting! I'm not seeing some of the trends I was expecting (e.g. `BorrowerRate`
+and `StatedMonthlyIncome` don't seem highly correlated), but there are some trends here
+that are unexpected. For example: 
 
+* Even though they have the highest correlation of these variable pairs, I expected more correlation for `CreditScoreMidPt` and `BorrowerRate` (r = -0.462).
 
+* `MonthlyLoanPayment` and `Borrower Rate` have a highly unusual functional dependence and also show a low correlation (-0.245). I would have thought these would be more strongly correlated *and I certainly expected them to have a positive Pearson's r!* How odd. Since this is a highly nonlinear data set, we probably shouldn't take the r value too seriously...
+
+* Here's one we should explore further: there's a *positive* correlation (0.293) between `MonthlyLoanPayment` and `CreditScoreMidPt`. But if a borrower's rate goes down as a function of increasing credit score, why would the payment increase with higher credit scores? This warrants further investigation. There appear to be some outlier data points causing some havoc with these results, so it will be good to filter those out.
+
+There are a few other variable combinations that I expect intuitively will be interesting to investigate but that I couldn't fit into the `ggpairs` analysis, so we'll explore those individually.
+
+But first things first: we have a to-do item lingering from our univariate analysis that we should address. `BorrowerState` showed some behavior that we wanted to explore further in this bivariate analysis section, so let's do that!
+
+## Y vs. BorrowerState
+
+Let's take a look at the relationship `BorrowerState` has with some of our other variables. As you will see frequently in this Bivariate Analysis section, our we will always take a look at the relationship each variable has with our outcome variable, `LoanStatus`. However, in order to better understand how other predictor variables interact with one another, we will at times plot those instead. Let's see what falls out!
+
+First, we'll reproduce our simple counts of loans over states from earlier.
+
+### Borrower State Loans Per Capita
+
+```{r Distribution of BorrowerStates Redux}
+ggplot(aes(x = BorrowerState), data = loans) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4))
+```
+
+As seen earlier, CA, TX, NY, FL, and IL dominate these results. But what if we account for the populations of these states? What is the Prosper Loan per capita number for each state? After all, that's the more relevant measure here: what state has the greatest percentage of its population interested in Prosper loans? Is it a state like CA that loves new software platforms, or somewhere else?
 
 ```{r Normalizing Loan Counts by State Population}
+library(dplyr)
 state_pops <- read.csv("Data/Population Estimates by State.csv",
                      as.is = c(TRUE, TRUE))
 state_abbrevs <- read.csv("Data/State_Abbrevs.csv", 
@@ -956,24 +985,36 @@ state_abbrevs <- read.csv("Data/State_Abbrevs.csv",
 #Have to remove the commas from the Population data values and convert them
 # from string to numeric values
 state_pops$Population <- as.numeric(gsub(",","",state_pops$Population))
-state_pops$Abbreviation <- state_abbrevs$Abbreviation
 
+#Now let's join the state_pops and state_abbrevs dfs to make one population df
+#That also includes abbreviated state names
+state_pops <- left_join(state_pops, state_abbrevs, by = c("State" = "State"))
+
+#Now we join the state_pops df with loans
+loans <- left_join(loans, select(state_pops, Population, Abbreviation), 
+                   by = c("BorrowerState" = "Abbreviation"))
 ```
 
-```{r}
-library(dplyr)
-#How to plot x = state, y = ..count../state_pop?
-#loans$BorrowerState.Population <- 
-#' Takes a state abbreviation (e.g. "OH") and returns its population.
-#' 
-#' @param x A state's 2-letter abbreviation as a string
-#' @return The population of \code{x} in 2017, as a numeric.
-#' @examples
-#' state_populator("DC")
-state_populator <- function(x) {
-  return(state_pops[state_pops$Abbreviation == x])
-}
+```{r Loans Per Capita by Borrower State}
+ggplot(aes(x = BorrowerState), data = loans) +
+  geom_bar(aes(weight = 1/Population)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4))
 ```
+
+Well look at that! Indeed, we see that the leading states are no longer the ones we had originally identified. On a loans per capita measure, DC actually leads the pack, oddly enough. It's followed by GA, MD, IL, and OR. Well this blows any theories I may have had out of the water. I wonder if this is purely a function of the limiting of what states could participate in the marketplace after 2009? Or perhaps it has something to do with people in those states living more paycheck-to-paycheck and needing loans to make ends meet? This would likely be reflected in their credit score, so we can check that out too.
+
+### BorrowerState and ListingDate
+
+
+
+### BorrowerState and Credit Score
+
+
+
+### BorrowerState and LoanStatus
+
+
+
 
 # Bivariate Analysis
 
