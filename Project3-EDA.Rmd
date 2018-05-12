@@ -21,7 +21,7 @@ output: html_document
 #In order to avoid having to do this for every single chunk in this RMD file,
 #I do the following:
 
-#REMOVE COMMENT AT END OF FOLLOWING LINE BEFORE SUBMITTING PROJECT:
+#REMOVE COMMENT AT END OF HASH FOLLOWING LINE BEFORE SUBMITTING PROJECT:
 knitr::opts_chunk$set(echo=FALSE)#, message=FALSE, warning=FALSE)
 
 
@@ -993,25 +993,128 @@ state_pops <- left_join(state_pops, state_abbrevs, by = c("State" = "State"))
 #Now we join the state_pops df with loans
 loans <- left_join(loans, select(state_pops, Population, Abbreviation), 
                    by = c("BorrowerState" = "Abbreviation"))
+
+#Need to re-factorize BorrowerState after the left_join operation
+loans$BorrowerState <- factor(loans$BorrowerState)
 ```
 
 ```{r Loans Per Capita by Borrower State}
 ggplot(aes(x = BorrowerState), data = loans) +
   geom_bar(aes(weight = 1/Population)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4))
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4)) +
+  geom_hline(color = "purple", yintercept = 4.3e-04, linetype = "dashed") +
+  ylab("Loans Per Capita")
 ```
 
-Well look at that! Indeed, we see that the leading states are no longer the ones we had originally identified. On a loans per capita measure, DC actually leads the pack, oddly enough. It's followed by GA, MD, IL, and OR. Well this blows any theories I may have had out of the water. I wonder if this is purely a function of the limiting of what states could participate in the marketplace after 2009? Or perhaps it has something to do with people in those states living more paycheck-to-paycheck and needing loans to make ends meet? This would likely be reflected in their credit score, so we can check that out too.
+Well look at that! Indeed, we see that the leading states are no longer the ones we had originally identified (except in the case of IL - they must really like Prosper!). On a loans per capita measure, DC leads the pack by a substantial margin. It's followed by GA, MD, IL, CT, and OR. Well this blows any theories I may have had out of the water. I wonder if this is purely a function of the time spent in the Prosper marketplace by these new leading per-capita states (e.g. those identified earlier, such as NY and CA, may not have gotten into the Prosper marketplace as soon as these new leader states, allowing those states to generate more loans when integrated over time)? Or perhaps it has something to do with people in these new leaders states on average living more paycheck-to-paycheck and needing loans to make ends meet? This would likely be reflected in their credit score, so we can check that out too.
 
 ### BorrowerState and ListingDate
 
+Per my first thought in the preceding section, let's take a look at how the listing creation dates trend as a function of the borrower's state. In theory, if the surprising loans per capita results are purely an effect of the time states have spent in the marketplace, then I should see that effect somehow in the time series data.
 
+```{r Listing Creation Date vs. Borrower State}
+ggplot(aes(x = BorrowerState, y = ListingCreationDate), data = loans) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4)) +
+  #DC = 9, GA = 12, MD = 22, IL = 16, CT = 8, OR = 39
+  geom_vline(color = "red", xintercept = c(9, 12, 16, 22, 8, 39), linetype = "dashed") +
+  geom_hline(color = "blue", yintercept = ymd_hms("2009-01-01 00:00:00"))
+
+```
+
+The states we noted as having the highest number of loans per capita are highlighted here using red dashed lines, with the year 2009 being shown with a blue line. From this, it certainly doesn't look like those states have been in the Prosper marketplace an appreciably longer time than the leaders from the original plot (e.g. CA and NY). Let's take a closer look at these different states in a more informative way, with some violin plots.
+
+
+```{r Listing Creation Date vs. Borrower State - Most Loans Per Capita States}
+ggplot(aes(x = BorrowerState, y = ListingCreationDate), 
+       data = subset(loans, BorrowerState == c("DC", "GA", "MD", "IL", "CT", "OR"))) +
+  geom_violin(draw_quantiles = c(0.25, 0.75)) +
+  #Add in a dot for median value
+  stat_summary(fun.y="median", geom="point") +
+  #DC = 9, GA = 12, MD = 22, IL = 16, CT = 8, OR = 39
+  geom_hline(color = "blue", yintercept = ymd_hms("2009-01-01 00:00:00"))
+```
+
+Looking at this, we can see a few interesting items of note among the top states:
+
+1. None of the per-capita leader states I identified earlier seem to have limited their participation to the pre-2009 timeframe, so they weren't forced out of the market during Prosper's redefinition of its services. In fact, the only ones that I see stopping borrowing activity after 2009 (from the larger earlier graph) are IA, ME, and ND. Only 3 of them (GA, IL, and OR) even have more than 25% of their loans from that time period and none have their median (denoting by the dots in the violin plots) near 2009 or earlier.
+
+2. DC has very limited loan activity prior to 2009, with its engagement not even beginning at a small scale until 2008. This is especially curious given that it led in terms of loans per capita. It seems that it had aggressive activity relative to its population size in a much shorter time period than the others.
+
+Well, given these data, it doesn't look like my theory makes sense. The loans-per-capita leader states haven't had a significantly longer exposure to the market than NY or CA, and in fact DC is a relative newcomer even though it leads for loans-per-capita! In that particular case, it's possible that DC's urban-only makeup could account for this, but we don't have the data on hand to explore that possibility.
+
+As mentioned earlier, let's explore borrower states as function of average credit score next.
 
 ### BorrowerState and Credit Score
 
+It stands to reason, given the personal loans nature of the Prosper marketplace, that states with a populace that is highly indebted relative to other states would have an outsized number of loans per capita. To explore this possibility, let's compare borrower states to the median credit score of borrowers from those states. While credit score is not a direct measure of leverage per capita (which would be better served by debt balances of each borrower, for example), we'll use it as a proxy for indebtedness. The assumption here is that lots of debt accounts carrying balances will have a mostly negative impact on credit score, albeit that's not guaranteed, but it's the best we have to work with in our current data set!
 
+```{r Median Borrower Credit Score vs. Borrower State}
+ggplot(aes(x = BorrowerState, y = CreditScoreMidpt), data = loans) +
+  stat_summary(fun.y="median", geom="point") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4)) +
+  geom_vline(color = "red", xintercept = c(9, 12, 16, 22, 8, 39), linetype = "dashed") +
+  scale_y_continuous(breaks = seq(630,710,10))
+```
+
+Well, that doesn't explain it either. There must be some other variable I'm not accounting for here that is dictating the loan frenzy per person that we're seeing in these states. Perhaps the percentage of the population that lives in an urban area correlates positively with the number of loans per person? That would be an interesting research path to take at a later date.
 
 ### BorrowerState and LoanStatus
+
+Finally, since loan status (especially complete pay-offs vs. defaults) is our outcome variable, no analysis of borrower states would be complete without looking at that dimension too!
+
+```{r Loan Status vs. Borrower State}
+ggplot(aes(x = BorrowerState), data = loans) +
+  geom_bar(aes(fill = LoanStatus)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4)) + 
+  #20 colors in scale just to make appropriate level of contrast across different statuses
+  scale_fill_manual(values = rainbow(20)) +
+  geom_vline(color = "black", xintercept = c(9, 12, 16, 22, 8, 39), linetype = "dashed") +
+  ylab("Number of Loans")
+
+
+ggplot(aes(x = BorrowerState), data = loans) +
+  geom_bar(aes(fill = LoanStatus, weight = 1/Population)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4)) + 
+  #20 colors in scale just to make appropriate level of contrast across different statuses
+  scale_fill_manual(values = rainbow(20)) +
+  geom_vline(color = "black", xintercept = c(9, 12, 16, 22, 8, 39), linetype = "dashed") +
+  ylab("Loans Per Capita of Different Statuses")
+```
+
+Here I've generated both just the counts of loans by state, broken down by the loan status, as well as the loans per capita plot we saw earlier with the same breakdown. While the latter plot *will* change the overall size of each bar (and thus the absolute size of each bar's portion dedicated to a given status), it *will not* cause the ratio of different statuses within a single state to change. As such, looking at the loans per capita plot should be sufficient for our purposes.
+
+Interestingly, while the number of loans and loans per capita overall vary quite a bit across states, the relative proportions of each different loan status seem to be largely maintained. So, for example, the proportion of loans Completed in CT seems to scale well with the number of loans Chargedoff or Defaulted, when compared to another states like OR. The only obvious caveat from this plot is DC: it seems to have an abnormally low amount of Chargedoff and Defaulted loans relative to the number of loans Completed. This is something I'll note for a deeper analytical dive later, as it can certainly be explored numerically without just relying on our eyeballing of the plot to derive insights, but that deep dive is beyond the exploratory data analysis objective of this current project.
+
+
+## Y vs. Credit Score Midpoint
+
+
+## Y vs. APR and/or Borrower Rate
+
+
+## Loan Terms vs. Loan Status
+
+
+## Loan Listing Date vs. Closed Date
+
+
+## Employment Status vs. Loan Status
+
+
+## Employment Status vs. Loan Status
+
+
+## Past Delinquencies vs. Loan Status
+
+
+##  Monthly Income vs. Loan Status
+
+
+## Loan Origination Amount vs. Loan Status
+
+
+## Monthly Loan Payment vs. Loan Status
 
 
 
