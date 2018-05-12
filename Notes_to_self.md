@@ -4,25 +4,34 @@
 	* May also be useful to keep in mind there was a late 2012/early 2013 dip in loans too
 
 
-12. CSMidpt vs. Loan Status
-	* CS vs. BorrowerRate - saw *positive* correlation between these, 
-			which is counterintuitive. Let's see what's going on!
+12. CS vs. Monthly payment - seeing a positive correlation. Why would your monthly payment be higher 
+		for a better credit score? That, barring anything else, would suggest a higher rate...
+		* FLAGGED FOR MULTIVARIATE EXPLORATION. Will be good to parse by loan term and/or 
+		original loaned amount (perhaps higher CS folks tend to take shorter terms or take out a much
+		higher principal, resulting in higher monthly payments?)
+
+
+	
 4. APR vs. Rate + correlation
- 	* IF APR and Rate aren't super-correlated, then do the rest of these for both; otherwise,
- 	 focus on Rate
- 	* Rate vs. closing date + correlation
+ 	* Monthly Payment vs. Borrower Rate - saw *negative* correlation between these, 
+			which is counterintuitive.
+		* This is still super confusing, I'll need to try and parse it by a third variable as well.
+			Will be useful to do Term and Principal too, but may need more...
  	* Rate vs. loan status
-	* LenderYield vs. Rate + correlation: expect this to have r = 1 or nearly so
+ 		* Need to explore this more in Multivariate section. In particular, my "vicious cycle" concern
+ 			needs to be explored more: if I add in the variable of credit score, do I see the 
+ 			"high CS = low rates = good loan outcomes" trend I'm expecting?
+
 3. Term vs. Loan Status
 3. Listing Date vs. Closed Date and correlation analysis - how related is your start date to your
  end date and how does this change pre-/post-2009?
 6. Listing Category vs. Loan Status
 11. Employment Status vs. Loan Status (spine plot?)
-	* Employment Status vs. Creation Date
 13. Delinq vs. LoanStatus
+16. MonthlyPayment vs. Loan Status
 14. MonthlyIncome vs. LoanStatus
 15. LoanOrigAmt vs. Loan Status
-16. MonthlyPayment vs. Loan Status
+
 
 
 
