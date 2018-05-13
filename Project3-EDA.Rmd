@@ -971,7 +971,7 @@ ggplot(aes(x = BorrowerState), data = loans) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4))
 ```
 
-As seen earlier, CA, TX, NY, FL, and IL dominate these results. But what if we account for the populations of these states? What is the Prosper Loan per capita number for each state? After all, that's the more relevant measure here: what state has the greatest percentage of its population interested in Prosper loans? Is it a state like CA that loves new software platforms, or somewhere else?
+As seen earlier, CA, TX, NY, FL, and IL dominate these results. But what if we account for the populations of these states? What is the Prosper loan per capita number for each state? After all, that's the more relevant measure here: what state has the greatest percentage of its population interested in Prosper loans? Is it a state like CA that loves new software platforms, or somewhere else?
 
 ```{r Normalizing Loan Counts by State Population}
 library(dplyr)
@@ -1047,7 +1047,7 @@ As mentioned earlier, let's explore borrower states as function of average credi
 
 ### BorrowerState and Credit Score
 
-It stands to reason, given the personal loans nature of the Prosper marketplace, that states with a populace that is highly indebted relative to other states would have an outsized number of loans per capita. To explore this possibility, let's compare borrower states to the median credit score of borrowers from those states. While credit score is not a direct measure of leverage per capita (which would be better served by debt balances of each borrower, for example), we'll use it as a proxy for indebtedness. The assumption here is that lots of debt accounts carrying balances will have a mostly negative impact on credit score, albeit that's not guaranteed, but it's the best we have to work with in our current data set!
+It stands to reason, given the personal loans nature of the Prosper marketplace, that states with a populace that is highly indebted relative to other states would have an outsized number of loans per capita. To explore this possibility, let's compare borrower states to the median credit score of borrowers from those states. While credit score is not a direct measure of leverage per capita (which would be better served by overall debt balances of each borrower, for example), we'll use it as a proxy for indebtedness. The assumption here is that lots of debt accounts carrying balances will have a mostly negative impact on credit score - albeit that's not guaranteed, but it's the best we have to work with in our current data set!
 
 ```{r Median Borrower Credit Score vs. Borrower State}
 ggplot(aes(x = BorrowerState, y = CreditScoreMidpt), data = loans) +
@@ -1084,7 +1084,7 @@ ggplot(aes(x = BorrowerState), data = loans) +
 
 Here I've generated both just the counts of loans by state, broken down by the loan status, as well as the loans per capita plot we saw earlier with the same breakdown. While the latter plot *will* change the overall size of each bar (and thus the absolute size of each bar's portion dedicated to a given status), it *will not* cause the ratio of different statuses within a single state to change. As such, looking at the loans per capita plot should be sufficient for our purposes.
 
-Interestingly, while the number of loans and loans per capita overall vary quite a bit across states, the relative proportions of each different loan status seem to be largely maintained. So, for example, the proportion of loans Completed in CT seems to scale well with the number of loans Chargedoff or Defaulted, when compared to another states like OR. The only obvious caveat from this plot is DC: it seems to have an abnormally low amount of Chargedoff and Defaulted loans relative to the number of loans Completed. This is something I'll note for a deeper analytical dive later, as it can certainly be explored numerically without just relying on our eyeballing of the plot to derive insights, but that deep dive is beyond the exploratory data analysis objective of this current project.
+Interestingly, while the number of loans and loans per capita overall vary quite a bit across states, the relative proportions of each different loan status seem to be largely maintained. So, for example, the proportion of loans Completed in CT seems to scale well with the number of loans Chargedoff or Defaulted, when compared to another state like OR. The only obvious caveat from this plot is DC: it seems to have an abnormally low amount of Chargedoff and Defaulted loans relative to the number of loans Completed. This is something I'll note for a deeper analytical dive later, as it can certainly be explored numerically without just relying on our eyeballing of the plot to derive insights, but that deep dive is beyond the exploratory data analysis objective of this current project.
 
 
 ## Y vs. Credit Score Midpoint
@@ -1133,9 +1133,9 @@ ggplot(aes(x = LoanStatus, y = CreditScoreMidpt),
 
 OK, there's a lot to see here, so let's break things down.
 
-First of all, here I've drawn a horizontal line at a score of 675, as this is around the median score for both the Chargedoff and Defaulted loans. We can see that the median scores for the different statuses stay above 675 and increase as we get to more positive statuses for the most part, keeping in line with my hypothesis about better scores being somewhat predictive of better borrowers. The only caveat is the Cancelled status, but that status can apply to a wide variety of possible scenarios (e.g. federal or state policies, bankruptcies, new company policies, etc.). As such, let's ignore that status (and it's surprisingly flat distribution) for these purposes.
+First of all, here I've drawn a horizontal line at a score of 675, as this is around the median score for both the Chargedoff and Defaulted loans. We can see that the median scores for the different statuses stay above 675 and increase as we get to more positive statuses for the most part, keeping in line with my hypothesis about better scores being somewhat predictive of better borrowers. This trend is also observed when looking at the length of the tails belowe the 675 threshold: better statuses seem to have shorter tails (although this is more true for Current and FinalPayment than for Completed). The only caveat is the Cancelled status, but that status can apply to a wide variety of possible scenarios (e.g. federal or state policies, bankruptcies, new company policies, etc.). As such, let's ignore that status (and it's surprisingly flat distribution) for these purposes.
 
-Another item that draws the eye in these violin plots is the odd shapes of the Current and Completed distributions. The frequency of the peaks seen here is 20 score points, which also happens to be the width of each credit score bin (as the original upper and lower credit score range values are always 19 points apart). As such, these natural binning of the scores makes for effectively discrete credit score values. Likely the fact that so many loans (the majority) have a status of Completed or Current, these  peaks in the distributions likely exist for all loan statuses, but are simply exaggerated for these statused due to the sheer number of data points associated with those statuses.
+Another item that draws the eye in these violin plots is the odd shapes of the Current and Completed distributions. The frequency of the peaks seen here is 20 score points, which also happens to be the width of each credit score bin (as the original upper and lower credit score range values are always 19 points apart). As such, this natural binning of the scores makes for effectively discrete credit score values. Likely the fact that so many loans (the majority) have a status of Completed or Current, these  peaks in the distributions likely exist for all loan statuses, but are simply exaggerated for these statused due to the sheer number of data points associated with those statuses.
 
 One other oddity I notice: many statuses cutoff below a score of 600. In fact, only Completed, Cancelled, Defaulted, and Chargedoff have data below this score. Why is that? Did the marketplace not track these other statuses until some point in time wherein they imposed a credit score minimum on borrowers or something? Due to this oddity, we'll next plot the credit scores in our data set vs. the loan listing date to see if there's any obvious temporal changes. 
 
@@ -1144,7 +1144,8 @@ One other oddity I notice: many statuses cutoff below a score of 600. In fact, o
 ```{r Temporal Trends in Credit Scores}
 ggplot(aes(x = ListingCreationDate, y = CreditScoreMidpt), data = loans) +
   geom_jitter(width = 0, alpha = 1/20) +
-  scale_y_continuous(limits = c(350,800))
+  scale_y_continuous(limits = c(350,800)) +
+  geom_hline(yintercept = c(415, 520, 600, 640), linetype = "dashed", color = "blue")
 ```
 
 Aha! Indeed, it looks like there is a (likely artificial) lower bound on credit scores that begins in early 2007, then increases around mid-2009, and increases once more in late 2013. It's not clear why these changes occurred, but at least it provides the context to explain what we saw earlier when exploring Loan Status and credit scores. This also provides important context for later interpretations of our data: if the market was self-regulating to exclude lower credit scores as it took on greater numbers of loans, credit-score-related factors (e.g. likelihood of default) are being mitigated as a result and skewing our results as a function of time.
@@ -1170,14 +1171,14 @@ OK, now we're ready to explore this strange negative relationship. Let's go!
 
 ```{r Payment vs. Rate}
 ggplot(aes(x = BorrowerRate, y = MonthlyLoanPayment), data = loans) +
-  geom_point(alpha = 1/20) +
+  geom_point(alpha = 1/100) +
   geom_smooth(method = "lm", color = "red")
 
 
 with(loans, cor.test(BorrowerRate, MonthlyLoanPayment))
 ```
 
-Hmmm...this one is definitely not as simple to explain as I had hoped. It looks at first glance like the linear fit is flawed and providing the opposite sign you might expect, but with a little transparency, I can see the negative slope in the data. Perhaps there are a lot of loans with low rates but short terms and thus a higher monthly payment? Or a similar scenario, but with high principal amounts on the loans? I'll need to explore this a bit more in the multivariate section later.
+Hmmm...this one is definitely not as simple to explain as I had hoped. It looks at first glance like the linear fit is flawed and providing the opposite sign you might expect, but with a little alpha adjustment to deal with overplotting, I can see the negative slope in the data. Perhaps there are a lot of loans with low rates but short terms and thus a higher monthly payment? Or a similar scenario, but with high principal amounts on the loans? I'll need to explore this a bit more in the multivariate section later. Also of note here is some kind of "stratification effect." It's almost as though the plot is actually an amalgam of different positively-sloped lines. I suspect we may find some pattern that explains these lines by layering in one or two other variables in the later multivariate analysis section.
 
 ### Rate and Lender Yield
 
@@ -1217,7 +1218,7 @@ ggplot(aes(x = LoanStatus), data = loans) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
-Perhaps unsurprisingly due to our earlier univariate analysis, we see here that the majority of loans in any given status has a term of 36 months. From this visualization, it's not immediately obvious that there's any trend to Term variable, so let's move on.
+Perhaps unsurprisingly due to our earlier univariate analysis, we see here that the majority of loans in any given status has a term of 36 months. From this visualization, it's not immediately obvious that there's any trend with the Term variable, so let's move on.
 
 ## Listing Category vs. Loan Status
 
@@ -1230,7 +1231,7 @@ ggplot(aes(x = LoanStatus), data = loans) +
   scale_fill_manual(values = rainbow(30))
 ```
 
-Nope, there doesn't seem to be much of interest here either. We already knew that a large portion of the loans in the data set were oriented towards Debt Consolidation, and the only other obvious difference between positive and negative loan statuses seems to be that Current doesn't have as large of a portion in the "Not available" category as the others do. This is likely more a function of the listing creation date, with earlier loans likely having less resolution as to what they were going to be used for.  
+Nope, there doesn't seem to be much of interest here either. We already knew that a large portion of the loans in the data set were oriented towards Debt Consolidation, and the only other obvious difference between positive and negative loan statuses seems to be that Current doesn't have as large of a portion in the "Not available" category as the others do. This is likely more a function of the listing creation date, with earlier loans likely having less resolution as to what they were going to be used for, so this doesn't seem to be a notable result.  
 
 ## Employment Status vs. Loan Status
 
@@ -1256,7 +1257,7 @@ ggplot(aes(x = LoanStatus, y = DelinquenciesLast7Years), data = loans) +
   coord_cartesian(ylim = c(0,12))
 ```
 
-Unsurprisingly, we find that the positive loan statuses have significantly fewer delinquencies in their uppermost quartiles than the negative loan status groups. That being said, almost every status has a median delinquency count of 0. The oddball here (as is often the case we've seen) is the Cancelled status. I wish we had more context for those loans! Possibly they were the lowest-performing loans of the portfolio, or maybe the ones that were still in the marketplace prior to the 2009 reboot? Let's take a look at Loan Status over time, both for listing creation and closing dates.
+Unsurprisingly, we find that the positive loan statuses have significantly fewer delinquencies in their uppermost quartiles than the negative loan status groups. That being said, almost every status has a median delinquency count of 0. The oddball here (as is often the case, we've seen) is the Cancelled status. I wish we had more context for those loans! Possibly they were the lowest-performing loans of the portfolio, or maybe the ones that were still in the marketplace prior to the 2009 reboot? Let's take a look at Loan Status over time, both for listing creation and closing dates.
 
 ## Listing Creation and Closing Dates vs. Loan Status
 
@@ -1272,7 +1273,9 @@ ggplot(aes(x = LoanStatus, y = ClosedDate), data = loans) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
-That did it! OK, this makes more sense now, at least temporally. None of these Cancelled loans existed past 2009. Weirdly enough, they all seem to have started at ended in the same timeframe, with identical boxplots for both y-variables. This suggests there's still something artificial about them, but most likely they were very poor-performing loans that Prosper cancelled as part of its reboot for some reason instead of just putting them into default, perhaps to clear out their balance sheets.
+That did it! OK, this makes more sense now, at least temporally. None of these Cancelled loans existed past 2009 (in fact, they seem limited to just mid-2006 except for a couple of outliers). Weirdly enough, they all seem to have started at ended in the same timeframe, with identical boxplots for both y-variables. This suggests there's still something artificial about them (perhaps they were just test loans used as part of the software development for the marketplace?), but likely they were very poor-performing loans that Prosper cancelled as part of its reboot for some reason instead of just putting them into default, perhaps to clear out their balance sheets.
+
+Also of note here: many of the loans with positive statuses were listed after the market reboot in 2009 and many of the loans with negative statuses were created before then. This is suggestive that the free-market auction-based system for determining interest rates that Prosper had prior to 2009 wasn't doing a good job of reducing risks of default for investors. The new pre-determined-by-Prosper model seems to be reducing risk much more, if this is any indicator.
 
 ## Monthly Loan Payment vs. Loan Status
 
@@ -1286,7 +1289,7 @@ ggplot(aes(x = LoanStatus, y = MonthlyLoanPayment), data = loans) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
-Well nevermind that theory! The median monthly loan payment amount for Chargedoff and Defaulted loans is approximately the same value as the amount for FinalPayment and Completed, and actually *lower* than that of loans that are Current! Even when looking at the distribution for each status as a function of monthly payment amount we see peaking at roughly the same monthly payment amounts. In fact, when accounting for outliers, the highest monthly payment amounts exist for Completed loans, totally flying in the face of my hypothesis on this one. Perhaps this variable isn't as predictive as I had hoped...noted.
+Well nevermind about that theory! The median monthly loan payment amount for Chargedoff and Defaulted loans is approximately the same value as the amount for FinalPayment and Completed, and actually *lower* than that of loans that are Current! Even when looking at the distribution for each status as a function of monthly payment amount we see peaking at roughly the same monthly payment amounts. In fact, when accounting for outliers, the highest monthly payment amounts exist for Completed loans, totally flying in the face of my hypothesis on this one. Perhaps this variable isn't as predictive as I had hoped. Noted.
 
 ## Monthly Income vs. Loan Status
 
@@ -1312,7 +1315,7 @@ ggplot(aes(x = LoanStatus, y = StatedMonthlyIncome), data = loans) +
   geom_hline(yintercept = 4000, color = "blue", linetype = "dashed") +
   scale_y_continuous(breaks = seq(0,5E4,5E3))
 ```
-Well, it certainly seems like the loans with positive statuses also tend to have a higher median monthly income as well as **significantly** higher outlier incomes than those with negative statuses. So, at the very least this is strongly suggestive that I'm right about the relationship between loan status and monthly income! Of course, things like biases in self-reporting of incomes by the borrowers can be an issue here, but that's more likely the reason why we have some ridiculous income outliers, not the cause of the overally trends.
+Well, it certainly seems like the loans with positive statuses also tend to have a higher median monthly income as well as **significantly** higher outlier incomes than those with negative statuses. So, at the very least this is strongly suggestive that I'm right about the relationship between loan status and monthly income! Of course, things like biases in self-reporting of incomes by the borrowers can be an issue here, but that's more likely the reason why we have some significant income outliers, not the cause of the overall trends we're seeing.
 
 ## Loan Origination Amount vs. Loan Status
 
@@ -1328,8 +1331,27 @@ ggplot(aes(x = LoanStatus, y = LoanOriginalAmount), data = loans) +
   geom_hline(color = "blue", linetype = "dashed", yintercept = 4250)
 ```
 
-The first thing I notice here are the peaks in the distributions for each status. As we observed in the univariate analysis section, people seemed to favor loans with principals that were multiples of $5,000 (ah, the idiosyncrasies of humans' logarithmic thinking). In addition, it's clear that my hypothesis is again proven false. We can see here that the median values of loan principals for the positive statuses are equivalent to or higher than those for Chargedoff and Defaulted. I guess good borrowers tend to avoid small personal loans in favor of one big one? Hard to say for sure.
+The first thing I notice here are the peaks in the distributions for each status. As we observed in the univariate analysis section, people seemed to favor loans with principals that were multiples of $5,000 (ah, the idiosyncrasies of humans' logarithmic thinking). In addition, it's clear that my hypothesis is again proven false. We can see here that the median values of loan principals for the positive statuses are equivalent to or higher than those for Chargedoff and Defaulted. I guess good borrowers tend to avoid small personal loans in favor of one big one? Hard to say for sure. Perhaps we need to take a look at what types of loans these were? Let's try that.
 
+### Loan Principal vs. Listing Category
+
+```{r}
+ggplot(aes(x = ListingCategory, y = LoanOriginalAmount), data = loans) +
+  geom_violin(draw_quantiles = c(0.25, 0.75)) +
+  #Add in a dot for median value
+  stat_summary(fun.y="median", geom="point") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+The patterns here are pretty intuitive. The top 5 categories by median value are:
+
+1. Debt Consolidation
+1. Baby & Adoption
+2. Wedding Loans
+4. Business
+5. Boat
+
+Nope, nothing here seems to explain the larger median principal amounts for more positive status loans. Oh well, this may be something that should be noted for future exploration and modeling.
 
 # Bivariate Analysis
 
@@ -1337,24 +1359,62 @@ The first thing I notice here are the peaks in the distributions for each status
 investigation. How did the feature(s) of interest vary with other features in \
 the dataset?
 
+The primary feature of interest for this data set are the loan statuses, as they represent the current state/outcome of each loan and effects that that loan may have had on the lives of the borrowers. So all of these observations are relative to the `LoanStatus` variable. Here are some observations I made:
+
+1. Borrowers' states of residence show some interesting trends. The number of loans overall and per capita varies quite a bit across states, but surprisingly the proportions of each state's loan portfolio that fall into the different loan statuses aren't that different. One anomaly here though: DC seems to have an abnormally low number of loans with  negative status (I'm largely looking at Chargedoff and Defaulted statuses when I reference "negative statuses"). 
+
+2. We do indeed see what we may expect with relation to credit scores, wherein higher scores tend to have better loan statuses (as measured by the median credit score and the length of the distribution tails into the lower score region for each status).
+
+3. I found a concerning trend when looking at how interest rates relate to loan statuses. It looks like there may be a vicious cycle present in these data: negative loan statuses are more common for loans with higher interest rates and lower rates are more common for loans with good statuses. Since we already know that credit scores correlate negatively with interest rates, this means that people with poor credit scores get higher rates, which make them more likely to end up defaulting on the loans, which then will cause their credit scores to go down further. This is a concerning possibility that warrants further exploration in the multivariate analysis section of this report.
+
+4. When looking at delinquencies in the last seven years for borrowers, we find that the positive loan statuses have significantly fewer delinquencies in their uppermost quartiles than the negative loan status groups. That being said, the median delinquency count for each status grouping seems to be zero, except for Cancelled loans.
+
+5. Loans in the Cancelled status are very limited in time: in fact, they're so limited it may be that they are entirely artificial (e.g. created by a software engineer to test out the code for the online marketplace). Even if that's not the case, the way they are so limited in time makes them highly suspicious data points and justify my ongoing assumption that they're not an important status from which we can derive meaningful insights.
+
+6. Also, we find that many of the loans with positive statuses were listed after the market reboot in 2009 and many of the loans with negative statuses were created before then. This suggests that the modern interest-rate-setting model that Prosper is using has a tendency to reduce lender risk compared to the old auction-based model. This is bound to be a good thing for their business, even though they only instituted the changes due to a class action lawsuit.
+
+7. Monthly payment amounts don't seem to be very predictive of loan statuses, surprisingly. 
+
+8. Finally, it looks like borrowers with higher incomes tend to have more positive loan statuses.
+
 ### Did you observe any interesting relationships between the other features \
 (not the main feature(s) of interest)?
 
+Indeed I did. Some relationships between predictor variables I observed were:
+
+1. **Borrower state vs. Listing creation date:** found that a few states (IA, ME, and ND) 
+didn't participate in the marketplace after 2009. Also, of the states that we identified 	as having the highest loans per capita (DC, CT, GA, IL, MD, and OR), we saw most of their activity occurring after the 2009 Prosper marketplace reboot.
+
+2. **Credit Scores vs. Monthly Loan Payments:** these are positively correlated and show a peak in the monthly payment amount at a score of 710. This is a very odd result, given that higher scores should typically result in lower rates and thus lower	monthly payments. It's *possible* that this assumption is flawed however, as it's possible	that those with higher scores tend to choose shorter loan terms or higher loan principals.	Likely there is indeed something going on here that goes beyond interest rates, since we also saw a negative correlation between interest rate and credit score (as we'd expect). This is something I've flagged for deeper analysis in the multivariate section of this report.
+
+
+3. **Credit Scores vs. Interest Rates:** one interesting item to note is the nonlinear decrease in interest rates with increasing scores: it's easier to score a significant reduction in interest rate by improving a low credit score by 10 points than it is to improve a high score by the same amount. This is somewhat intuitive given the hard upper limit on credit scores that exists (850), but is still more obvious with the visualization provided herein.
+	
+4. **Credit Scores vs. Loan Listing Dates:** the floor for borrower credit scores seems to have been forced higher and higher as the market aged, starting around 350-425 in the early days, then increasing to 520, 600, and 640 over time.
+
+5. **APR and Lender Yield vs. Interest Rates:** these are essentially the same variables and thus we choose to exclude APR and Lender Yield from further analysis in favor of `BorrowerRate`.
+
+6. **Interest Rates vs. Monthly Payment:** if the interest rate for a loan goes up, we'd expect that the monthly payment would also go up,	right? Wrong. Analysis of the rate and monthly payments across the portfolio indicates a	*negative* Pearson's r. However, this is another case wherein likely we have a nonlinear	behavior at play. I say this because, at first glance (with no alpha applied to the plot),	it looks like the relationship between these variables we expect is indeed the one we observe:	higher rates lead to higher monthly payments. But as soon as you start playing with the	visualization to account for overplotting, we see the story isn't so simple. In particular, an oddity we note is a sort of stratification effect: there seem to be positively-sloped "strata" in the data that may indicate different loan parameters will illuminate this further. This is also something I've noted needs further multivariate exploration later in this report.
+
 ### What was the strongest relationship you found?
 
+Well, if the metric for "strongest relationships" is Pearson's r, then the strongest relationships were between APR, lender yields, and interest rates! 
+
+But beyond that, the strongest, and one of the most interesting, relationships is that between loan statuses and time: A significant portion of the loans with the most negative statuses (Defaulted or Chargedoff) correspond with loans listed prior to the 2009 Prosper marketplace reboot and a substantial amount of the loans with the most positive statuses (Current, Final Payment in Progress, or Completed) are those that were listed *after* the 2009 reboot. As stated earlier, this seems to suggest that risk to lenders was significantly lowered due to the change in interest-setting protocols. This is particularly interesting since this change is bound to only be a positive one for Prosper's business model, but Prosper didn't seek out this change: they were forced to do it because of a class-action lawsuit! This is a great example of a modification to a business model that would benefit from some rigorous A/B testing.
 
 # Multivariate Plots Section
+## Exploring Further: Credit Scores and Monthly Loan Payments
 
-> **Tip**: Now it's time to put everything together. Based on what you found in
-the bivariate plots section, create a few multivariate plots to investigate
-more complex interactions between variables. Make sure that the plots that you
-create here are justified by the plots you explored in the previous section. If
-you plan on creating any mathematical models, this is the section where you
-will do that.
 
-```{r echo=FALSE, Multivariate_Plots}
 
-```
+## Exploring Further: Monthly Payments and Borrower Rates
+
+
+
+## Exploring Further: Borrower Rates and Loan Statuses
+
+
+
 
 # Multivariate Analysis
 
@@ -1362,7 +1422,11 @@ will do that.
 investigation. Were there features that strengthened each other in terms of \
 looking at your feature(s) of interest?
 
+
+
 ### Were there any interesting or surprising interactions between features?
+
+
 
 ------
 
@@ -1407,6 +1471,3 @@ make sure you justify why you chose each plot by describing what it shows.
 the insights you found. What were some of the struggles that you went through?
 What went well? What was surprising? Make sure you include an insight into
 future work that could be done with the dataset.
-
-> **Tip**: Don't forget to remove this, and the other **Tip** sections before
-saving your final work and knitting the final report!
