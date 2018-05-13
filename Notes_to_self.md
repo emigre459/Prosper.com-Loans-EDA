@@ -22,17 +22,17 @@
  			needs to be explored more: if I add in the variable of credit score, do I see the 
  			"high CS = low rates = good loan outcomes" trend I'm expecting?
 
-3. Term vs. Loan Status
-3. Listing Date vs. Closed Date and correlation analysis - how related is your start date to your
- end date and how does this change pre-/post-2009?
-6. Listing Category vs. Loan Status
-11. Employment Status vs. Loan Status (spine plot?)
-13. Delinq vs. LoanStatus
-16. MonthlyPayment vs. Loan Status
-14. MonthlyIncome vs. LoanStatus
-15. LoanOrigAmt vs. Loan Status
 
+#Items for re-hashing in analysis section:
+1. How did different predictor variables relate to the outcome variable?
+	* 
 
+2. How did predictor variables relate to each other?
+	* 
+
+3. What was the strongest relationship I observed?
+	* Be snarky at first: the ones with r ~ 1 were pretty strong!
+	* Then talk about...
 
 
 # Interesting things to study with multivariate analysis

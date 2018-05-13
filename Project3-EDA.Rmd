@@ -1209,38 +1209,129 @@ Based upon the shapes of the distributions and the median rate values for each s
 
 ## Loan Terms vs. Loan Status
 
+Okie dokie, let's look now at how loan term length might relate to loan status.
 
+```{r Loan Terms and Statuses}
+ggplot(aes(x = LoanStatus), data = loans) +
+  geom_bar(aes(fill = Term)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
 
-## Loan Listing Date vs. Closed Date
+Perhaps unsurprisingly due to our earlier univariate analysis, we see here that the majority of loans in any given status has a term of 36 months. From this visualization, it's not immediately obvious that there's any trend to Term variable, so let's move on.
 
+## Listing Category vs. Loan Status
+
+One possibility: different end-uses of loans may dictate likelihood of repayment. While this is likely to largely correlate to the size of the principal on the loan, it's possible it goes deeper than that (e.g. [some reports indicate](https://moneyish.com/hoard/americans-dont-have-a-clue-how-to-pay-their-bills/) that Americans often pay off credit cards before making their mortgage payment, if strapped for cash). So let's see what happens.
+
+```{r Listing Category and Loan Status}
+ggplot(aes(x = LoanStatus), data = loans) +
+  geom_bar(aes(fill = ListingCategory)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  scale_fill_manual(values = rainbow(30))
+```
+
+Nope, there doesn't seem to be much of interest here either. We already knew that a large portion of the loans in the data set were oriented towards Debt Consolidation, and the only other obvious difference between positive and negative loan statuses seems to be that Current doesn't have as large of a portion in the "Not available" category as the others do. This is likely more a function of the listing creation date, with earlier loans likely having less resolution as to what they were going to be used for.  
 
 ## Employment Status vs. Loan Status
 
+As noted earlier, it will be interesting to see if employment status has an influence on the loan status (e.g. those who are employed full-time are likely to have positive loan outcomes moreso than the rest of the borrower pool). Let's take a look.
 
-## Employment Status vs. Loan Status
+```{r}
+ggplot(aes(x = LoanStatus), data = loans) +
+  geom_bar(aes(fill = EmploymentStatus)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  scale_fill_manual(values = rainbow(15))
+```
 
+Hmmm...this isn't as obvious of a trend as I'd hoped. We already knew that a majority of borrowers were classified as "Employed", but that is the overwhelming majority only for current loans. For Chargedoff, Defaulted, and Completed, there is more of a balance between Employed, and Full-time, with the latter actually being the majority. It looks like there isn't much of a correlation here between loan and employment status.
 
 ## Past Delinquencies vs. Loan Status
 
+OK, let's try something else. Past delinquencies should theoretically be predictive of loan performance, right? Let's take a look at that.
 
-## Monthly Income vs. Loan Status
+```{r}
+ggplot(aes(x = LoanStatus, y = DelinquenciesLast7Years), data = loans) + 
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  coord_cartesian(ylim = c(0,12))
+```
 
+Unsurprisingly, we find that the positive loan statuses have significantly fewer delinquencies in their uppermost quartiles than the negative loan status groups. That being said, almost every status has a median delinquency count of 0. The oddball here (as is often the case we've seen) is the Cancelled status. I wish we had more context for those loans! Possibly they were the lowest-performing loans of the portfolio, or maybe the ones that were still in the marketplace prior to the 2009 reboot? Let's take a look at Loan Status over time, both for listing creation and closing dates.
+
+## Listing Creation and Closing Dates vs. Loan Status
+
+Something strange is going on with the Cancelled status. It's sticking out as a unique loan class in a variety of ways and the only possibility I can think of is that these loans were active during the marketplace reboot in 2009. So let's see if that falls out of the data.
+
+```{r}
+ggplot(aes(x = LoanStatus, y = ListingCreationDate), data = loans) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+ggplot(aes(x = LoanStatus, y = ClosedDate), data = loans) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+That did it! OK, this makes more sense now, at least temporally. None of these Cancelled loans existed past 2009. Weirdly enough, they all seem to have started at ended in the same timeframe, with identical boxplots for both y-variables. This suggests there's still something artificial about them, but most likely they were very poor-performing loans that Prosper cancelled as part of its reboot for some reason instead of just putting them into default, perhaps to clear out their balance sheets.
 
 ## Monthly Loan Payment vs. Loan Status
 
+Another seemingly intuitive relationship with loan statuses is that of the monthly payment amount. Surely a larger payment makes borrowers more likely to have a negative loan outcome, right? 
 
+```{r Monthly Payments and Loan Statuses}
+ggplot(aes(x = LoanStatus, y = MonthlyLoanPayment), data = loans) +
+  geom_violin(draw_quantiles = c(0.25, 0.75)) +
+  #Add in a dot for median value
+  stat_summary(fun.y="median", geom="point") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+Well nevermind that theory! The median monthly loan payment amount for Chargedoff and Defaulted loans is approximately the same value as the amount for FinalPayment and Completed, and actually *lower* than that of loans that are Current! Even when looking at the distribution for each status as a function of monthly payment amount we see peaking at roughly the same monthly payment amounts. In fact, when accounting for outliers, the highest monthly payment amounts exist for Completed loans, totally flying in the face of my hypothesis on this one. Perhaps this variable isn't as predictive as I had hoped...noted.
+
+## Monthly Income vs. Loan Status
+
+It seems like a long shot at this point, but let's see how the loan status trends as a function of the borrower's stated monthly income. **If** there is a trend here, I'd expect those with higher incomes to have an easier time paying off their loans/keeping current. Is that indeed the case?
+
+```{r Income vs. Loan Status}
+ggplot(aes(x = LoanStatus, y = StatedMonthlyIncome), data = loans) +
+  geom_violin(draw_quantiles = c(0.25, 0.75)) +
+  #Add in a dot for median value
+  stat_summary(fun.y="median", geom="point") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+Ummm...I'm going to go out on a limb here and assume that the incomes included for Current and Completed are probably a bit erroneous, or at the very least significant outliers. Let's scale down the y-axis a little bit.
+
+```{r Income vs. Loan Status Part Deux}
+ggplot(aes(x = LoanStatus, y = StatedMonthlyIncome), data = loans) +
+  geom_violin(draw_quantiles = c(0.25, 0.75)) +
+  #Add in a dot for median value
+  stat_summary(fun.y="median", geom="point") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  coord_cartesian(ylim = c(0,5E4)) +
+  geom_hline(yintercept = 4000, color = "blue", linetype = "dashed") +
+  scale_y_continuous(breaks = seq(0,5E4,5E3))
+```
+Well, it certainly seems like the loans with positive statuses also tend to have a higher median monthly income as well as **significantly** higher outlier incomes than those with negative statuses. So, at the very least this is strongly suggestive that I'm right about the relationship between loan status and monthly income! Of course, things like biases in self-reporting of incomes by the borrowers can be an issue here, but that's more likely the reason why we have some ridiculous income outliers, not the cause of the overally trends.
 
 ## Loan Origination Amount vs. Loan Status
 
+And now, for our final bivariate plot, let's look at loan origination amounts (which we're equating here to the loan principal) as a function of loan status. As with many of these other relationships, we expect that higher origination amounts will result in loans that are harder to pay off and thus more negative statuses, but for some reason I have a feeling that this variable (like so many before it) will turn out to be more complicated than that...
 
+```{r}
+ggplot(aes(x = LoanStatus, y = LoanOriginalAmount), data = loans) +
+  geom_violin(draw_quantiles = c(0.25, 0.75)) +
+  #Add in a dot for median value
+  stat_summary(fun.y="median", geom="point") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  scale_y_continuous(breaks = seq(0,35000,5000)) +
+  geom_hline(color = "blue", linetype = "dashed", yintercept = 4250)
+```
 
-
+The first thing I notice here are the peaks in the distributions for each status. As we observed in the univariate analysis section, people seemed to favor loans with principals that were multiples of $5,000 (ah, the idiosyncrasies of humans' logarithmic thinking). In addition, it's clear that my hypothesis is again proven false. We can see here that the median values of loan principals for the positive statuses are equivalent to or higher than those for Chargedoff and Defaulted. I guess good borrowers tend to avoid small personal loans in favor of one big one? Hard to say for sure.
 
 
 # Bivariate Analysis
-
-> **Tip**: As before, summarize what you found in your bivariate explorations
-here. Use the questions below to guide your discussion.
 
 ### Talk about some of the relationships you observed in this part of the \
 investigation. How did the feature(s) of interest vary with other features in \
