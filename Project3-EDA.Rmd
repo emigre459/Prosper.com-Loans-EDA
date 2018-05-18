@@ -367,22 +367,17 @@ so let's see how these distributions (linear and log10) change.
 
 ```{r Ordered Loan Status Distribution - Linear and Log10}
 
-p_status <- ggplot(aes(x = LoanStatus), data = loans) +
+ggplot(aes(x = LoanStatus), data = loans) +
   geom_bar() +
   theme(axis.text.x  = element_text(angle = 45, hjust = 1))
 
-p_status_log <- ggplot(aes(x = LoanStatus), data = loans) +
+ggplot(aes(x = LoanStatus), data = loans) +
   geom_bar() +
   theme(axis.text.x  = element_text(angle = 45, hjust = 1)) +
   scale_y_continuous("log_10(count)",
                      trans = scales::log10_trans())
-
-p_status
 ```
 
-```{r}
-p_status_log
-```
 
 
 This is helpful. It's now more clear that the difference in counts in Past Due
@@ -407,15 +402,13 @@ str(loans$ClosedDate)
 OK, time to plot this up!
 
 ```{r Distribution of Closing Dates}
-p_closedDate <- ggplot(aes(x = ClosedDate), data = loans) +
+ggplot(aes(x = ClosedDate), data = loans) +
   #these data are of the type POSIXct and thus the unit it's plotting is
   #actually seconds. Thus, 1 year = 60 sec * 60 min * 24 hr * 365.25 days
   geom_histogram(binwidth = (60 * 60 * 24 * 365.25)/12) +
   scale_x_datetime(date_labels = "%m-%Y", date_breaks = "6 months") +
   theme(axis.text.x  = element_text(angle = 90)) +
   ggtitle("Closing Dates")
-
-p_closedDate
 ```
 
 ```{r}
@@ -1412,7 +1405,8 @@ ggplot(aes(x = CreditScoreMidpt, y = MonthlyLoanPayment), data = loans) +
   geom_jitter(height = 0, alpha = 1/20) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1)) +
   facet_wrap(~Term) +
-  scale_x_continuous(limits = c(350,800), breaks = seq(350,800,40))
+  scale_x_continuous(limits = c(350,800), breaks = seq(350,800,40)) +
+  ggtitle("Monthly Payments vs. Credit Score", subtitle = "Faceted by Loan Term")
 ```
 
 Hmmm...this doesn't answer our original question, but rather spawns new questions! Why do we see less spread in credit scores for the shortest and longest terms? And why does it still seem like monthly payments go up as a function of improving credit scores? We can see that, likely, longer terms result in lower monthly payments, but it feels like we're missing important information here. Perhaps we can add in one more visual dimension to really provide some insights...
@@ -1425,21 +1419,23 @@ ggplot(aes(x = CreditScoreMidpt, y = MonthlyLoanPayment), data = loans) +
   geom_point(alpha = 1/50, aes(size = LoanOriginalAmount)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1)) +
   facet_wrap(~Term, ncol = 1) +
-  scale_x_continuous(limits = c(350,800), breaks = seq(350,800,40)) +
+  scale_x_continuous(limits = c(420,800), breaks = seq(420,800,40)) +
   #Keep legend alpha = 1.0
-  guides(colour = guide_legend(override.aes = list(alpha = 1)))
+  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
+  ggtitle("Monthly Payments vs. Credit Score", 
+          subtitle = "Faceted by Loan Term, Bubbles Sized by Principal")
 ```
 
 Here we provide 4 dimensions of information: the monthly loan payment (y-axis), the borrowers' credit scores (x-axis), the amount of principal of each loan (size of data points, ranging from \$1,000 to \$35,000), and the length/term of the loan (facets). We can infer a few things from this view.
 
-First of all, it seems like different loan terms have different minimum allowed credit scores. The 36 month term, which we know from our univariate analysis to be the majority of the loan portfolio (75%), includes scores as low as 430 or less. But the other two terms don't seem to allow for credit scores below 600. Looking back at our analysis of credit scores as a function of loan listing date, we recall that all of the loans were limited to a minimum borrower credit score of 600 after 2009. Likely the 12- and 60-month terms were loan products that don't come into existence until after 2009.
+First of all, it seems like different loan terms have different minimum allowed credit scores. The 36 month term, which we know from our univariate analysis to be the majority of the loan portfolio (75%), includes scores as low as 430 or less. But the other two term lengths don't seem to allow for credit scores below 600. Looking back at our analysis of credit scores as a function of loan listing date, we recall that all of the loans were limited to a minimum borrower credit score of 600 after 2009. Likely the 12- and 60-month terms were loan products that don't come into existence until after 2009.
 
 Without fail, larger principal amounts equate to higher monthly payments (which is, admittedly, intuitive). Also, it looks like higher credit scores provided borrowers with access to higher allowed principal amounts, as there seem to be discrete steps wherein a higher credit score gains access to a higher principal and a higher monthly payment. It is therefore pretty likely that monthly payment amounts are far more sensitive to the principal amount and loan term than they are to the credit score. 
 
 
 ## Exploring Further: Monthly Loan Payments and Borrower Rates
 
-Given that the interest rate seems to correlate strongly (r = -0.462) with the credit score, we'd expect that monthly payments would exhibit a similar relationship to interest rates as they did previously with credit scores (albeit with a reversal of the sign of the correlation, given that higher credit scores should produce lower interest rates). Let's take a closer look at that relationship, especially since earlier in the bivariate section we saw a curious relationship between monthly payments and interest rates: they were *negatively* correlated and we saw some kind of stratification effect in the data wherein there were differnet positively-sloped lines visible in the data set, potentially indicative of something fishy going on.
+Given that the interest rate seems to correlate strongly (r = -0.462) with the credit score, we'd expect that monthly payments would exhibit a similar relationship to interest rates as they did previously with credit scores (albeit with a reversal of the sign of the correlation, given that higher credit scores should produce lower interest rates). Let's take a closer look at that relationship, especially since earlier in the bivariate section we saw a curious relationship between monthly payments and interest rates: they were *negatively* correlated and we saw some kind of stratification effect in the data wherein there were different positively-sloped lines visible in the data set, potentially indicative of something fishy going on.
 
 ```{r Rates and Monthly Payments: Faceted by Listing Category}
 ggplot(aes(x = BorrowerRate, y = MonthlyLoanPayment), data = loans) +
@@ -1452,7 +1448,7 @@ ggplot(aes(x = BorrowerRate, y = MonthlyLoanPayment), data = loans) +
 
 First I reproduce the earlier odd-looking plot of Monthly Payment vs. Rate for comparison, then I facet by Listing Category to see if, perhaps, there is some obvious deviation among the categories that can explain what's going on here. Alas, nothing obvious pops out. In fact, the only real item of note is that the the Not Available category is the only one exhibiting the positively-sloped overall behavior that I was originally expecting.
 
-I wonder if this is another example of loan parameters being artificially limited (e.g. as we saw in the preceding sub-section, higher credit scores were the only ones with access to higher principal amounts, explaining why those high credit score individuals are appearing to have much higher monthly payments).
+I wonder if this is another example of loan parameters being artificially limited (e.g. as we saw in the preceding sub-section, higher credit scores were the only ones with access to higher principal amounts, explaining why those high credit score individuals are appearing to have much higher monthly payments)?
 
 ```{r Rates and Monthly Payments: Faceted by Term}
 ggplot(aes(x = BorrowerRate, y = MonthlyLoanPayment), data = loans) +
@@ -1464,7 +1460,8 @@ Interesting! It looks like that stratification effect that I saw earlier is pote
 
 ```{r Binning by Principal and Faceting}
 loans$PrincipalBins <- cut(loans$LoanOriginalAmount, 
-                           breaks = c(0, 4000, 6500, 12000, 35000),
+                           breaks = seq(0,36000, 6000),
+                           #breaks = c(0, 6000, 12000, 18000, 24000, 35000),
                            right = TRUE, ordered_result = TRUE)
 
 ggplot(aes(x = BorrowerRate, y = MonthlyLoanPayment), data = loans) +
@@ -1503,9 +1500,9 @@ ggplot(aes(x = LoanStatus, y = BorrowerRate), data = extremeStatuses) +
   geom_vline(xintercept = 2.5, color = "blue")
 ```
 
-**First of all, a note on this visualization:** the area of each violin plot is scaled according to the actual counts represented by that plot in a given range of credit scores. So fatter plots have a higher count of loans that they are representing, but only for that credit score bin (so the Current plot in (650,700] with the same area as the Current plot in (700,750] *may not* have the same counts associated with it). Also, each facet represents a range of credit scores.
+**First of all, a note on this visualization:** the area of each violin plot is scaled according to the actual counts represented by that plot in a given range of credit scores. So, fatter plots have a higher count of loans that they are representing, but only for that credit score bin (so the Current plot in `(650,700]` with the same area as the Current plot in `(700,750]` *may not* have the same counts associated with it). Also, each facet represents a range of credit scores.
 
-Hmmm...I *think* these plots give us some reason for hope. While we can definitely see the correlation between high credit scores and low interest rates (and vice versa) through the median values and the bulges in the violin plots (representing the distribution of loans in that facet and loan status over interest rates), we also see that a fair proportion of the lowest credit score borrowers are still making it into the positive statuses (located to the right of the blue solid line). This is good news! It means that you can still have a reasonable chance for success with your Prosper loan, even if you find that 
+Hmmm...I *think* these plots give us some reason for hope. While we can definitely see the correlation between high credit scores and low interest rates (and vice versa) through the median interest rate values and the bulges in the violin plots (representing the distribution of loans in that facet and loan status over interest rates), we also see that a fair proportion of the lowest credit score borrowers are still making it into the positive statuses (located to the right of the blue solid line). This is good news! It means that you can still have a reasonable chance for success with your Prosper loan, even if you find that you have a high interest rate relative to someone with the exact same loan but a higher starting credit score.
 
 
 # Multivariate Analysis
@@ -1514,34 +1511,45 @@ Hmmm...I *think* these plots give us some reason for hope. While we can definite
 investigation. Were there features that strengthened each other in terms of \
 looking at your feature(s) of interest?
 
-
+Yes! We were concerned in the bivariate section of the report that borrowers with poor credit scores were often getting high interest rates and that this was setting them up for a highly probable negative loan outcome/status, which of course would result in a lowering of their credit scores, suggesting a potential "vicious cycle of failure" that a borrower could never escape once caught up in it. Thankfully, once we faceted interest rate versus loan status by credit score bins, we found that a fair number of low-credit-score borrowers were actually still making it into positive loan statuses even with high interest rates. In fact, the positive loan statuses seemed to be the majority of the loans, except for the very lowest credit score bin. While there may still be cause for concern for that lowest score group, overall this is much better news than our original bivariate analysis had suggested!
 
 ### Were there any interesting or surprising interactions between features?
 
+We finally figured out the oddities related to the seemingly positive correlation between monthly payments and borrower credit scores! By adding in the extra dimensions of loan terms and loan principal amounts, we discovered that monthly payments were more sensitive to loan term lengths and principal than to credit scores themselves. **However,** we also discovered that borrowers seem to access higher principal amounts with higher credit scores. This must be a feature built into the Prosper platform, an artificial limiting of prinicipal amounts allowed to certain credit score brackets. This limiting effectively caused the counterintuitive positive correlation between credit score and monthly payment, since apparently a large number of borrowers with high credit scores decided to take advantage of the increased prinicipal ceiling they were offered.
 
+In addition, we explored the relationship between monthly loan payments and the interest rate. This, too, had a strange correlation when treated in a bivariate manner, showing a *decrease* in monthly payment as interest rate *increased*. In addition, the eye was immediately drawn to what looked like strata in the data: positively-sloped lines, all layered upoon one another. By faceting this out and coloring, both using the loan prinicipal variable, we were able to determine that in fact these lines were likely constant-principal (or near-constant) lines, showing an increasing monthly payment with increasing interest rate, just as we were originally expecting. In this case, it looked like nothing terribly artificial was occurring due to the market's structure, it was just a matter of too many data points and not enough context.
 
 ------
 
 # Final Plots and Summary
 
-> **Tip**: You've done a lot of exploration and have built up an understanding
-of the structure of and relationships between the variables in your dataset.
-Here, you will select three plots from all of your previous exploration to
-present here as a summary of some of your most interesting findings. Make sure
-that you have refined your selected plots for good titling, axis labels (with
-units), and good aesthetic choices (e.g. color, transparency). After each plot,
-make sure you justify why you chose each plot by describing what it shows.
-
 ### Plot One
-```{r echo=FALSE, Plot_One}
+```{r Plot_One}
+p1_1 <- ggplot(aes(x = BorrowerState), data = loans) +
+  geom_bar(fill = "grey") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4)) +
+  geom_vline(xintercept = c(9, 12, 16, 22, 8, 39), color = "red") +
+  ylab("Number of Loans") +
+  xlab("Borrower's State of Residence") +
+  ggtitle("Number of Loans in Each U.S. State")
 
+p1_2 <- ggplot(aes(x = BorrowerState), data = loans) +
+  geom_bar(aes(weight = 1/Population), fill = "black") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4)) +
+  geom_vline(xintercept = c(9, 12, 16, 22, 8, 39), color = "red") +
+  ylab("Number of Loans Per Capita") +
+  xlab("Borrower's State of Residence") +
+  ggtitle("Number of Loans in Each U.S. State",
+          subtitle = "Scaled by Each State's Population")
+
+grid.arrange(p1_1, p1_2)
 ```
 
 ### Description One
 
 
 ### Plot Two
-```{r echo=FALSE, Plot_Two}
+```{r Plot_Two}
 
 ```
 
@@ -1549,7 +1557,7 @@ make sure you justify why you chose each plot by describing what it shows.
 
 
 ### Plot Three
-```{r echo=FALSE, Plot_Three}
+```{r Plot_Three}
 
 ```
 
@@ -1563,3 +1571,4 @@ make sure you justify why you chose each plot by describing what it shows.
 the insights you found. What were some of the struggles that you went through?
 What went well? What was surprising? Make sure you include an insight into
 future work that could be done with the dataset.
+

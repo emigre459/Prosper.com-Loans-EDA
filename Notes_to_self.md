@@ -13,8 +13,13 @@
  			"high CS = low rates = good loan outcomes" trend I'm expecting?
 
 
-FINAL PLOTS
+
+
+# FINAL PLOTS
 1. Plot of loans (raw count) by state in light background, with loans per capita in foreground
+	* c("DC", "GA", "MD", "IL", "CT", "OR")
+	* c(9, 12, 16, 22, 8, 39)
+
 
 2. Borrower Rate, Loan Status, Credit Score facet
 	* Try to figure out a way to do a colored background (red for bad statuses, green for good ones)
