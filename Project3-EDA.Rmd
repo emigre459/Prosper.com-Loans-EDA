@@ -1,7 +1,7 @@
 ---
 title: "Udacity DAND Project 3 - Exploratory Data Analysis"
 author: "Dave Rench McCauley"
-date: "4/2/2018"
+date: "5/18/2018"
 output: html_document
 ---
 
@@ -26,16 +26,12 @@ knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
 
 
 library(ggplot2)
+library(dplyr)
 ```
 
 ```{r Load_the_Data}
 # Load the Data
 full_data <- read.csv("Data/prosperLoanData.csv")
-```
-
-```{r Check the data}
-str(full_data)
-head(full_data)
 ```
 
 
@@ -90,7 +86,6 @@ chosen_columns <- c("ListingCreationDate",
 #Didn't use subset() here as documentation indicates it is not ideal for
 #programmatic use
 loans <- full_data[chosen_columns]
-head(loans)
 ```
 
 ```{r Cleaning Up the Data}
@@ -916,10 +911,10 @@ I also mapped the original numercially-coded `ListingCategory..numeric.` variabl
 
 As stated earlier, there is a curious drop in loan activity in 2009 that I am going to investigate further. Other oddities I noted:
 
-2. The loans largely have very high interest rates, with a surprisingly large number of loans taking an abnormally high value of APR and Rate, outside of the relatively smooth distribution of rates seen for the rest of the portfolio
-7. Distribution of borrower credit scores is mostly normal and centered around 680, with some outliers near zero and and a small peak around 520 - 540.
-8. The majority of borrowers (~67%) have no delinquencies in the last 7 years, but there are some who have 99 or more.
-10. Monthly loan payments trend downward in frequency with increasing payment amount, not a surprising trend. However, they were multi-modal, indicating a variety of payments were particularly popular for some reason, trending from $200/month (the most popular) to \$1350/month
+1. The loans largely have very high interest rates, with a surprisingly large number of loans taking an abnormally high value of APR and Rate, outside of the relatively smooth distribution of rates seen for the rest of the portfolio
+2. Distribution of borrower credit scores is mostly normal and centered around 680, with some outliers near zero and and a small peak around 520 - 540.
+3. The majority of borrowers (~67%) have no delinquencies in the last 7 years, but there are some who have 99 or more.
+4. Monthly loan payments trend downward in frequency with increasing payment amount, not a surprising trend. However, they were multi-modal, indicating a variety of payments were particularly popular for some reason, trending from $200/month (the most popular) to \$1350/month
 
 # Bivariate Plots Section
 
@@ -967,7 +962,7 @@ ggplot(aes(x = BorrowerState), data = loans) +
 As seen earlier, CA, TX, NY, FL, and IL dominate these results. But what if we account for the populations of these states? What is the Prosper loan per capita number for each state? After all, that's the more relevant measure here: what state has the greatest percentage of its population interested in Prosper loans? Is it a state like CA that loves new software platforms, or somewhere else?
 
 ```{r Normalizing Loan Counts by State Population}
-library(dplyr)
+
 state_pops <- read.csv("Data/Population Estimates by State.csv",
                      as.is = c(TRUE, TRUE))
 state_abbrevs <- read.csv("Data/State_Abbrevs.csv", 
