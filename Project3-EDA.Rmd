@@ -21,8 +21,8 @@ output: html_document
 #In order to avoid having to do this for every single chunk in this RMD file,
 #I do the following:
 
-#REMOVE COMMENT AT END OF HASH FOLLOWING LINE BEFORE SUBMITTING PROJECT:
-knitr::opts_chunk$set(echo=FALSE)#, message=FALSE, warning=FALSE)
+
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
 
 
 library(ggplot2)
@@ -1524,6 +1524,7 @@ In addition, we explored the relationship between monthly loan payments and the 
 # Final Plots and Summary
 
 ### Plot One
+
 ```{r Plot_One}
 p1_1 <- ggplot(aes(x = BorrowerState), data = loans) +
   geom_bar(fill = "grey") +
@@ -1547,28 +1548,77 @@ grid.arrange(p1_1, p1_2)
 
 ### Description One
 
+Here we show two plots: the number of loans in our data set for each state that the borrowers are from and then the same plot, but with a twist: we've taken the population of each state and scaled the original counts by $1/Population$ to give us a count of the loans per capita in each state. Vertical red bars indicate the top 6 states for loans per capita, and these same states are highlighted in the raw counts plot, highlighting how drastically different the count of loans per state is when you don't account for population. 
+
+The upper plot doesn't tell us a whole lot, really, beyond telling us which states Prosper sees the greatest traffic. The lower plot is the more interesting one: it tells us which states show the most *interest* in the personal loans offered by Prosper, instead of conflating that interest potentially with simply the differences in population between states.
 
 ### Plot Two
 ```{r Plot_Two}
-
+ggplot(aes(x = LoanStatus, y = BorrowerRate), data = extremeStatuses) +
+  geom_violin(draw_quantiles = c(0.25, 0.75), scale = "count", 
+              aes(fill = LoanStatus)) +
+  #Add in a dot for median value
+  stat_summary(fun.y="median", geom="point") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  geom_hline(yintercept = 0.25, color = "blue", linetype = "dashed") +
+  facet_wrap(~CreditScoreBins) +
+  annotate("rect", xmin = 0, xmax = 2.5, ymin = -Inf, ymax = Inf, 
+           fill = "red", alpha = 0.1) +
+  annotate("rect", xmin = 2.5, xmax = 5.5, ymin = -Inf, ymax = Inf, 
+           fill = "green", alpha = 0.1) +
+  ylab("Loan Interest Rate") +
+  xlab("Loan Statuses") +
+  ggtitle("Distribution of Interest Rates Over Different Loan Statuses",
+          subtitle = "Faceted by Borrowers' Credit Score Ranges")
 ```
 
 ### Description Two
 
+As discussed when we last visited this plot in the multivariate plots section, here we can see how different loans' statuses differ based upon interest rate and borrower credit score. We have colored negative statuses with a red background and positive ones with a green background to provide a guide for the eye. 
+
+We find that, while borrowers with lower credit scores do tend to have higher interest rates for their loans, there are still a good proportion of each credit score group that have positive statuses, save for the very lowest-scoring group. This is evidence that, while your chances of having a happy ending with your loan are diminished with a lower credit score and thus a higher likely interest rate, you are by no means doomed to have a bad loan outcome (and a further diminished credit score as a result).
 
 ### Plot Three
 ```{r Plot_Three}
-
+ggplot(aes(x = CreditScoreMidpt, y = MonthlyLoanPayment), data = loans) +
+  geom_point(alpha = 1/50,
+             aes(size = LoanOriginalAmount, color = ListingCreationDate)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1)) +
+  facet_wrap(~Term, ncol = 1) +
+  scale_x_continuous(limits = c(420,800), breaks = seq(420,800,40)) +
+  #Setup the point size legend to have alpha = 1 and new title
+  guides(size = guide_legend("Loan Principal Amount", 
+                             override.aes = list(alpha = 1),
+                             reverse = TRUE)) +
+  #Setup the color legend to have alpha = 1 and new title
+  guides(colour = guide_legend("Loan Creation Date", 
+                               override.aes = list(alpha = 1),
+                             reverse = TRUE)) +
+  ylab("Monthly Loan Payment ($)") +
+  xlab("Borrower's Credit Score") +
+  ggtitle("Monthly Payments vs. Credit Score", 
+          subtitle = "Faceted by Loan Term Length in Months")
 ```
 
 ### Description Three
+
+These plots show us that loans with the middle term (36 months) have the widest range of credit scores. Looked at in this way, we realize that credit scores likely dictate the size of principal that Prosper allowed a borrower to borrow, which directly impacted their monthly payment. In addition, we see based on the coloring that the 36-month term has the largest variance in loan creation dates, which is unsurprising given our earlier analysis of borrower credit scores as a function of the loan creation date. One final interesting item is that the average size of a loan seems to go up with increasing term length. As a longer term reduces the monthly payment amount, this isn't a terribly surprising result, as I would expect most people would want to amortize their loan over the longest time possible to minimize each month's payment, even though that means they're spending more on interest over the life of the loan.
+
+I'd also like to point out here how cool it is that this plot covers **5 dimensions**: 
+1. Monthly payment amount
+2. Credit score
+3. Loan term
+4. Loan principal amount
+5. Loan creation date
+
+Hopefully you'll agree that it does so in an intuitive manner!
 
 ------
 
 # Reflection
 
-> **Tip**: Here's the final step! Reflect on the exploration you performed and
-the insights you found. What were some of the struggles that you went through?
-What went well? What was surprising? Make sure you include an insight into
-future work that could be done with the dataset.
+This loans data set has almost 114,000 loans in it and the full set of data includes 81 different variables, with the loans all coming from Prosper.com and covering the time period of 2006 - 2014. That's a lot of loans and variables to investigate! I chose to condense my investigation down to 16 variables that I thought had the potential to be the most interesting, both in terms of my chosen outcome variable `LoanStatus` and in relation to one another. 
 
+I found trends that I both expected and that surprised me. For example, I expected to find a positive correlation between interest rates and monthly loan payments. While it took some time and deeper exploration than I expected, this expectation proved valid in the end. However, I was surprised to find that there were some externalities present in the data that required a modificaiton of some of my hypotheses. For example, the 2009 reboot of the Prosper marketplace wherein they significantly changed their mechanism for setting the interest rate of a listing had deep ramifications on the data. I discovered that, not only did activity in the platform grind to a halt in early 2009 and then slowly start from scratch again midway through that year, but apparently limitations of different kinds were applied before and after that point in time (e.g. credit score floors appear to have been implemented that year and in later years). These revelations caused me to treat the time series variables (`ListingCreationDate` and `ClosedDate`) with far more caution than I would ever expected. In addition, a particularly useful trend I observed (especially useful to Prosper's business practices, I'm sure) was that loans with positive statuses were far more common after the market reboot than beforehand. This suggests that the pre-2009 auction-style rate-setting scheme Prosper initially implemented generated much higher-risk loans than the new format, likely resulting in far more pleased lenders on the platform.
+
+There were so many variables in the original data that I didn't explore that those are a ripe area for future exploration (e.g. a number of variables from borrowers' credit reports were omitted in this exploration). Additionally, had I not needed to spend so much time on pure exploration of this large data set, it would have been interesting to build a model to predict individual borrower risk of default. There are so many variables at play in this data set that likely a simple linear regression approach would not capture the necessary nuances, but it would certainly be interesting to try and do some kind of out-of-sample testing and prediction. Also, since these data stop in early 2014 and it is now mid-2018, it's possible that more information could be gleaned from a data set update. I could imagine asking questions like "10 years out of the US market collapse, do we see signs of accelerating or decelerating economic recovery, using Prosper activity as a proxy?"
